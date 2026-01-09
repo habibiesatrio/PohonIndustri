@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { ref, set } from 'firebase/database';
-import { db } from './firebase';
+import { db, auth } from './firebase';
 
 const Daftar = () => {
     const [nama, setNama] = useState('');
@@ -12,7 +12,6 @@ const Daftar = () => {
     const [bio, setBio] = useState('');
     const [message, setMessage] = useState('');
     const navigate = useNavigate();
-    const auth = getAuth();
 
     const handleDaftar = (e) => {
         e.preventDefault();
