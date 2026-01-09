@@ -76,12 +76,26 @@ const Login = () => {
                             </div>
                             {message && <p className="text-red-500 text-sm">{message}</p>}
                             <button
-                                type="submit"
-                                className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition-all"
-                            >
-                                Masuk
-                            </button>
+    type="submit"
+    className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition-all"
+>
+    Masuk
+</button>
                         </form>
+                        <div className="mt-8 text-center">
+                            <p className="text-sm text-slate-600">
+                                Belum punya akun?{' '}
+                                <button
+                                    onClick={() => {
+                                        // TODO: Implement registration flow
+                                        alert('Fitur pendaftaran belum tersedia.');
+                                    }}
+                                    className="text-red-600 hover:text-red-800 font-medium"
+                                >
+                                    Daftar di sini
+                                </button>
+                            </p>
+                        </div>
                         <div className="mt-6 text-center">
                             <button
                                 onClick={() => setShowForgotPassword(true)}
