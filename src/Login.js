@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ref, get, child } from 'firebase/database';
+import { db } from './firebase';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -13,9 +15,28 @@ const Login = () => {
 
     const handleLogin = (e) => {
         e.preventDefault();
-        // Simulasi login - ganti dengan logika autentikasi nyata
         if (email && password) {
-            navigate('/dashboard');
+            const userId = email.replace(/[^a-zA-Z0-9]/g, '');
+            get(child(ref(db), `users/${userId}`))
+                .then((snapshot) => {
+                    if (snapshot.exists()) {
+                        const user = snapshot.val();
+                        if (user.password === password) {
+                            // In a real app, you might want to use sessionStorage or localStorage
+                            // to keep the user logged in.
+                            sessionStorage.setItem('user', JSON.stringify(user));
+                            navigate('/dashboard');
+                        } else {
+                            setMessage('Email atau password salah.');
+                        }
+                    } else {
+                        setMessage('Email atau password salah.');
+                    }
+                })
+                .catch((error) => {
+                    console.error(error);
+                    setMessage('Terjadi kesalahan. Coba lagi.');
+                });
         } else {
             setMessage('Harap isi email dan password.');
         }
@@ -86,10 +107,7 @@ const Login = () => {
                             <p className="text-sm text-slate-600">
                                 Belum punya akun?{' '}
                                 <button
-                                    onClick={() => {
-                                        // TODO: Implement registration flow
-                                        alert('Fitur pendaftaran belum tersedia.');
-                                    }}
+                                    onClick={() => navigate('/daftar')}
                                     className="text-red-600 hover:text-red-800 font-medium"
                                 >
                                     Daftar di sini
