@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { ref, set } from 'firebase/database';
 import { db } from './firebase';
 
@@ -11,26 +12,33 @@ const Daftar = () => {
     const [bio, setBio] = useState('');
     const [message, setMessage] = useState('');
     const navigate = useNavigate();
+    const auth = getAuth();
 
     const handleDaftar = (e) => {
         e.preventDefault();
         if (nama && email && password) {
-            const userId = email.replace(/[^a-zA-Z0-9]/g, '');
-            set(ref(db, 'users/' + userId), {
-                nama: nama,
-                email: email,
-                password: password, // In a real app, hash the password!
-                nomorHp: nomorHp,
-                bio: bio,
-            })
-            .then(() => {
-                alert('Pendaftaran berhasil!');
-                navigate('/login');
-            })
-            .catch((error) => {
-                setMessage('Gagal mendaftar. Coba lagi.');
-                console.error("Error writing document: ", error);
-            });
+            createUserWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    set(ref(db, 'users/' + user.uid), {
+                        nama: nama,
+                        email: email,
+                        nomorHp: nomorHp,
+                        bio: bio,
+                    })
+                    .then(() => {
+                        alert('Pendaftaran berhasil!');
+                        navigate('/login');
+                    })
+                    .catch((error) => {
+                        setMessage('Gagal menyimpan data pengguna.');
+                        console.error("Error writing document: ", error);
+                    });
+                })
+                .catch((error) => {
+                    setMessage('Gagal mendaftar. Coba lagi.');
+                    console.error("Error creating user: ", error);
+                });
         } else {
             setMessage('Harap lengkapi semua data.');
         }
