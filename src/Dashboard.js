@@ -162,19 +162,25 @@ const Dashboard = () => {
                     <NavItem active = { activeDashTab === 'gis' } onClick = {() => setActiveDashTab('gis')} icon = { < Map size = { 18 } />} label="Pemetaan GIS" />
                     <NavItem active = { activeDashTab === 'profile' } onClick = {() => navigate('/profile')} icon = { < User size = { 18 } />} label="Profil Pengguna" />
                 </nav>
-                <div className = "mt-auto pt-6 border-t border-slate-50" >
-                    <div className = "flex items-center gap-3 p-3 bg-slate-50 rounded-2xl mb-4" >
-                        <div className = "w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white font-black" > {user.nama.charAt(0).toUpperCase()} </div>
+                <div className="mt-auto pt-6 border-t border-slate-50">
+                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl mb-4">
+                        <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white font-black">
+                            {user.nama ? user.nama.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                        </div>
                         <div>
-                            <p className = "text-xs font-black text-slate-800 uppercase" > {user.nama} </p>
-                            <p className = "text-[9px] font-bold text-slate-400 uppercase" > {user.email} </p>
+                            <p className="text-xs font-black text-slate-800 uppercase">
+                                {user.nama || user.email}
+                            </p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase">
+                                {user.email}
+                            </p>
                         </div>
                     </div>
                     <button onClick={() => navigate('/profile')} className="w-full flex items-center gap-3 p-3 text-slate-400 hover:text-red-600 font-bold text-xs uppercase transition-colors">
                         <User size={18} /> Profile
                     </button>
-                    <button onClick = { handleLogout } className = "w-full flex items-center gap-3 p-3 text-slate-400 hover:text-red-600 font-bold text-xs uppercase transition-colors" >
-                        <LogOut size = { 18 } /> Logout Portal
+                    <button onClick={handleLogout} className="w-full flex items-center gap-3 p-3 text-slate-400 hover:text-red-600 font-bold text-xs uppercase transition-colors">
+                        <LogOut size={18} /> Logout Portal
                     </button>
                 </div>
             </aside>

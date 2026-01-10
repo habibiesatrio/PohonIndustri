@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from './firebase';
+import { auth, db } from './firebase';
+import { ref, get } from 'firebase/database';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -18,10 +19,20 @@ const Login = () => {
         if (email && password) {
             signInWithEmailAndPassword(auth, email, password)
                 .then((userCredential) => {
-                    // Signed in 
                     const user = userCredential.user;
-                    sessionStorage.setItem('user', JSON.stringify(user));
-                    navigate('/dashboard');
+                    const userRef = ref(db, 'users/' + user.uid);
+                    get(userRef).then((snapshot) => {
+                        if (snapshot.exists()) {
+                            const userData = snapshot.val();
+                            const combinedUser = { ...user, ...userData };
+                            sessionStorage.setItem('user', JSON.stringify(combinedUser));
+                            navigate('/dashboard');
+                        } else {
+                            // Handle case where user data doesn't exist in realtime database
+                            sessionStorage.setItem('user', JSON.stringify(user));
+                            navigate('/dashboard');
+                        }
+                    });
                 })
                 .catch((error) => {
                     setMessage('Email atau password salah.');
