@@ -23,10 +23,10 @@ const Profile = () => {
             <div className="max-w-2xl w-full bg-white rounded-2xl shadow-xl p-8">
                 <div className="flex items-center space-x-6">
                     <div className="w-24 h-24 rounded-full bg-red-600 flex items-center justify-center text-white text-4xl font-black">
-                        {user.nama.charAt(0).toUpperCase()}
+                        {(user.nama || user.email).charAt(0).toUpperCase()}
                     </div>
                     <div>
-                        <h2 className="text-3xl font-bold text-slate-900">{user.nama}</h2>
+                        <h2 className="text-3xl font-bold text-slate-900">{user.nama || user.email}</h2>
                         <p className="text-slate-500">{user.email}</p>
                     </div>
                 </div>
