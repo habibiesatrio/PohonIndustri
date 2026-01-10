@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ref, get, child } from 'firebase/database';
-import { db } from './firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from './firebase';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -16,26 +16,16 @@ const Login = () => {
     const handleLogin = (e) => {
         e.preventDefault();
         if (email && password) {
-            const userId = email.replace(/[^a-zA-Z0-9]/g, '');
-            get(child(ref(db), `users/${userId}`))
-                .then((snapshot) => {
-                    if (snapshot.exists()) {
-                        const user = snapshot.val();
-                        if (user.password === password) {
-                            // In a real app, you might want to use sessionStorage or localStorage
-                            // to keep the user logged in.
-                            sessionStorage.setItem('user', JSON.stringify(user));
-                            navigate('/dashboard');
-                        } else {
-                            setMessage('Email atau password salah.');
-                        }
-                    } else {
-                        setMessage('Email atau password salah.');
-                    }
+            signInWithEmailAndPassword(auth, email, password)
+                .then((userCredential) => {
+                    // Signed in 
+                    const user = userCredential.user;
+                    sessionStorage.setItem('user', JSON.stringify(user));
+                    navigate('/dashboard');
                 })
                 .catch((error) => {
-                    console.error(error);
-                    setMessage('Terjadi kesalahan. Coba lagi.');
+                    setMessage('Email atau password salah.');
+                    console.error("Error signing in: ", error);
                 });
         } else {
             setMessage('Harap isi email dan password.');
