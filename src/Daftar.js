@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { ref, set } from 'firebase/database';
-import { db, auth } from './firebase';
+import { rtdb, auth } from './firebase';
 
 const Daftar = () => {
     const [nama, setNama] = useState('');
@@ -19,7 +19,7 @@ const Daftar = () => {
             createUserWithEmailAndPassword(auth, email, password)
                 .then((userCredential) => {
                     const user = userCredential.user;
-                    set(ref(db, 'users/' + user.uid), {
+                    set(ref(rtdb, 'users/' + user.uid), {
                         nama: nama,
                         email: email,
                         nomorHp: nomorHp,

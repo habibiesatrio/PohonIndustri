@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth, db } from './firebase';
+import { auth, rtdb } from './firebase';
 import { ref, get } from 'firebase/database';
 
 const Login = () => {
@@ -20,7 +20,7 @@ const Login = () => {
             signInWithEmailAndPassword(auth, email, password)
                 .then((userCredential) => {
                     const user = userCredential.user;
-                    const userRef = ref(db, 'users/' + user.uid);
+                    const userRef = ref(rtdb, 'users/' + user.uid);
                     get(userRef).then((snapshot) => {
                         if (snapshot.exists()) {
                             const userData = snapshot.val();
