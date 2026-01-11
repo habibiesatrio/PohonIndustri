@@ -27,8 +27,13 @@ const DataManagement = () => {
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
-      setFile(selectedFile);
-      parseFile(selectedFile);
+        const fileName = selectedFile.name.toLowerCase();
+        if (fileName.endsWith('.csv') || fileName.endsWith('.json')) {
+            setFile(selectedFile);
+            parseFile(selectedFile);
+        } else {
+            setNotification({ message: 'Unsupported file type. Please upload CSV or JSON.', type: 'error' });
+        }
     }
   };
 
@@ -37,10 +42,11 @@ const DataManagement = () => {
     reader.onload = (e) => {
       try {
         const content = e.target.result;
-        if (file.type === 'application/json') {
+        const fileName = file.name.toLowerCase();
+        if (fileName.endsWith('.json')) {
           const jsonData = JSON.parse(content);
           setPreviewData(Array.isArray(jsonData) ? jsonData : [jsonData]);
-        } else {
+        } else if (fileName.endsWith('.csv')) {
           // Basic CSV parsing
           const lines = content.split('\n').filter(line => line.trim() !== '');
           const headers = lines[0].split(',').map(h => h.trim());
@@ -60,13 +66,7 @@ const DataManagement = () => {
       }
     };
 
-    if (file.type === 'application/json') {
-        reader.readAsText(file);
-    } else if (file.type === 'text/csv') {
-        reader.readAsText(file);
-    } else {
-        setNotification({ message: 'Unsupported file type. Please upload CSV or JSON.', type: 'error' });
-    }
+    reader.readAsText(file);
   };
 
   const handleImport = async () => {
