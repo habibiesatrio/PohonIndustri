@@ -7,9 +7,14 @@ const DataManagement = () => {
   const [file, setFile] = useState(null);
   const [previewData, setPreviewData] = useState([]);
   const [notification, setNotification] = useState({ message: '', type: '' });
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    fetchData();
+    const userData = sessionStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+      fetchData();
+    }
   }, []);
 
   const fetchData = async () => {
@@ -157,6 +162,15 @@ const DataManagement = () => {
       </div>
     </div>
   );
+
+  if (!user) {
+    return (
+      <div className="container mx-auto p-4">
+        <h1 className="text-2xl font-bold mb-4">Data Management</h1>
+        <p className="text-red-500">You must be logged in to manage data. Please log in first.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-4">
