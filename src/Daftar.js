@@ -30,12 +30,12 @@ const Daftar = () => {
                         navigate('/login');
                     })
                     .catch((error) => {
-                        setMessage('Gagal menyimpan data pengguna.');
+                        setMessage(`Gagal menyimpan data pengguna: ${error.message}`);
                         console.error("Error writing document: ", error);
                     });
                 })
                 .catch((error) => {
-                    setMessage('Gagal mendaftar. Coba lagi.');
+                    setMessage(`Gagal mendaftar: ${error.message}`);
                     console.error("Error creating user: ", error);
                 });
         } else {
