@@ -159,14 +159,17 @@ const Dashboard = () => {
                     <NavItem active = { activeDashTab === 'paten' } onClick = {() => setActiveDashTab('paten')} icon = { < Microscope size = { 18 } />} label="Analitik Paten" />
                     <NavItem active = { activeDashTab === 'sektoral' } onClick = {() => setActiveDashTab('sektoral')} icon = { < Landmark size = { 18 } />} label="Data Sektoral" />
                     <NavItem active = { activeDashTab === 'performance' } onClick = {() => setActiveDashTab('performance')} icon = { < Activity size = { 18 } />} label="Performa Ekspor" />
-                    <NavItem active = { activeDashTab === 'gis' } onClick = {() => setActiveDashTab('gis')} icon = { < Map size = { 18 } />} label="Pemetaan GIS" />
-                </nav>
-                <div className="mt-auto pt-6 border-t border-slate-50">
-                    <div onClick={() => navigate('/profile')} className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl mb-4 cursor-pointer hover:bg-slate-100 transition-colors">
-                        <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white font-black">
-                            {user.nama ? user.nama.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
+                                        <NavItem active={activeDashTab === 'gis'} onClick={() => setActiveDashTab('gis')} icon={<Map size={18} />} label="Pemetaan GIS" />
+                                        <button onClick={() => navigate('/data-management')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[11px] font-black uppercase transition-all text-slate-500 hover:bg-slate-50`}>
+                                            <Database size={18} /> Manajemen Data
+                                        </button>
+                                    </nav>
+                                    <div className="mt-auto pt-6 border-t border-slate-50">
+                                        <div onClick={() => navigate('/profile')} className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl mb-4 cursor-pointer hover:bg-slate-100 transition-colors">
+                                            <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white font-black">
+                                                {user.nama ? user.nama.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div>
                             <p className="text-xs font-black text-slate-800 uppercase">
                                 {user.nama || user.email}
                             </p>

@@ -5,6 +5,7 @@ import Login from './Login';
 import Dashboard from './Dashboard';
 import Daftar from './Daftar';
 import Profile from './Profile';
+import DataManagement from './DataManagement';
 
 function App() {
     return (
@@ -14,6 +15,7 @@ function App() {
             <Route path="/daftar" element={<Daftar />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/data-management" element={<DataManagement />} />
         </Routes>
     );
 }
