@@ -20,7 +20,7 @@ const DataManagement = () => {
       setData(dataList);
     } catch (error) {
       console.error("Error fetching data: ", error);
-      setNotification({ message: 'Error fetching data from Firestore.', type: 'error' });
+      setNotification({ message: `Error fetching data from Firestore: ${error.message}`, type: 'error' });
     }
   };
 
@@ -70,22 +70,28 @@ const DataManagement = () => {
   };
 
   const handleImport = async () => {
+    console.log("handleImport called");
     if (previewData.length === 0) {
       setNotification({ message: 'No data to import.', type: 'warning' });
+      console.log("No data to import");
       return;
     }
+
+    console.log("Importing data:", previewData);
 
     try {
       const dataCollection = collection(db, 'exportData');
       for (const item of previewData) {
+        console.log("Importing item:", item);
         await addDoc(dataCollection, item);
       }
       setNotification({ message: 'Data imported successfully!', type: 'success' });
+      console.log("Data imported successfully");
       setFile(null);
       setPreviewData([]);
       fetchData(); // Refresh data from Firestore
     } catch (error) {
-      setNotification({ message: 'Error importing data to Firestore.', type: 'error' });
+      setNotification({ message: `Error importing data to Firestore: ${error.message}`, type: 'error' });
       console.error("Error importing data: ", error);
     }
   };
