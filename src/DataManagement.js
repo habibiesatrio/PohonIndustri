@@ -120,6 +120,7 @@ const DataManagement = () => {
   
           const docRef = doc(db, "pohon_industri", code);
           batch.set(docRef, {
+              ...row, // Preserve all original fields from the JSON row
               name: name,
               fobValue: cleanAndParse(fobValue),
               unitValue: cleanAndParse(unitValue),
