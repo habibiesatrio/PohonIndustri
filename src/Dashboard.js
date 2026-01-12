@@ -19,7 +19,9 @@ import {
     TrendingUp,
     ArrowUpCircle,
     ArrowDownCircle,
-    Zap
+    Zap,
+    Sheet,
+    GitMerge
 } from 'lucide-react';
 
 // --- MOCK DATA FOR TRL/MRL/CRL ---
@@ -128,18 +130,8 @@ const Dashboard = () => {
                     <NavItem active={activeDashTab === 'hilirisasi'} onClick={() => setActiveDashTab('hilirisasi')} icon={<Layers size={18} />} label="Hilirisasi Nasional" />
                     <NavItem active={activeDashTab === 'paten'} onClick={() => setActiveDashTab('paten')} icon={<Microscope size={18} />} label="Analitik Paten" />
                     <NavItem active={activeDashTab === 'sektoral'} onClick={() => setActiveDashTab('sektoral')} icon={<Landmark size={18} />} label="Data Sektoral" />
-                    <div className="relative">
-                        <button onClick={() => setHilirisasiOpen(!isHilirisasiOpen)} className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl text-[11px] font-black uppercase transition-all text-slate-500 hover:bg-slate-50`}>
-                            <div className="flex items-center gap-3"><Database size={18} /> Manajemen Hilirisasi</div>
-                            <ChevronDown size={18} className={`transition-transform ${isHilirisasiOpen ? 'rotate-180' : ''}`} />
-                        </button>
-                        {isHilirisasiOpen && (
-                            <div className="pl-8 pt-2 space-y-2">
-                                <button onClick={() => navigate('/data-management')} className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl text-[10px] font-bold uppercase transition-all text-slate-500 hover:bg-slate-100`}>Manajemen Data</button>
-                                <button onClick={() => navigate('/pohon-industri')} className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl text-[10px] font-bold uppercase transition-all text-slate-500 hover:bg-slate-100`}>Pohon Industri</button>
-                            </div>
-                        )}
-                    </div>
+                    <NavItem active={false} onClick={() => navigate('/data-management')} icon={<Database size={18} />} label="Manajemen Data" />
+                    <NavItem active={false} onClick={() => navigate('/pohon-industri')} icon={<GitMerge size={18} />} label="Pohon Industri" />
                 </nav>
                 <div className="mt-auto pt-6 border-t border-slate-50">
                      <div onClick={() => navigate('/profile')} className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl mb-4 cursor-pointer hover:bg-slate-100 transition-colors">
