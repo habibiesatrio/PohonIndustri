@@ -56,28 +56,36 @@ const DataManagement = () => {
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
+    alert("handleFileChange called.");
     if (selectedFile) {
         setFile(selectedFile);
-        setNotification({ message: 'File selected. Ready for preview.', type: 'info' });
+        setNotification({ message: 'File selected. Reading file...', type: 'info' });
+        alert(`File selected: ${selectedFile.name}`);
         
         const reader = new FileReader();
         reader.onload = async (event) => {
+            alert("FileReader onload event fired.");
             const csvText = event.target.result;
             try {
                 const results = manualParse(csvText);
+                alert(`Parsing successful. Found ${results.data.length} rows.`);
                 setPreviewData(results.data);
                 setNotification({ message: 'Preview ready. Please confirm to import.', type: 'info' });
             } catch (error) {
+                alert(`Error parsing file: ${error.message}`);
                 setNotification({ message: `Error parsing file: ${error.message}`, type: 'error' });
                 console.error("Error parsing file: ", error);
                 setPreviewData([]);
             }
         };
         reader.onerror = (e) => {
+            alert(`FileReader error: ${e.target.error.name}`);
             setNotification({ message: `Error reading file: ${e.target.error.name}`, type: 'error' });
             console.error("Error reading file:", e.target.error);
         };
         reader.readAsText(selectedFile);
+    } else {
+        alert("No file selected.");
     }
   };
   
