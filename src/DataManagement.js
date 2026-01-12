@@ -28,43 +28,18 @@ const DataManagement = () => {
 
   const fetchData = async () => {
     try {
-      // Pastikan "pohon_industri" sama persis dengan yang ada di Cloud Firestore
       const querySnapshot = await getDocs(collection(db, "pohon_industri"));
       const dataList = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      
-      console.log("Data dari Firebase:", dataList);
+      console.log("Data from Firebase:", dataList);
       return dataList;
     } catch (error) {
-      console.error("Error mengambil data:", error.message);
+      console.error("Error fetching data:", error.message);
       setNotification({ message: `Error fetching data from Firestore: ${error.message}`, type: 'error' });
     }
   };
-
-  const manualParse = (csvText) => {
-    const lines = csvText.split(/[\r\n]+/).filter(line => line.trim() !== '');
-    if (lines.length < 2) {
-        throw new Error("CSV must have a header and at least one data row.");
-    }
-    const delimiter = ';';
-    const headers = lines[0].trim().split(delimiter).map(h => h.replace(/\n/g, ' ').trim());
-    const data = [];
-    for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].trim().split(delimiter);
-        if (values.length !== headers.length) {
-            console.warn(`Skipping malformed row ${i + 1}: ${lines[i]}`);
-            continue;
-        }
-        const row = {};
-        for (let j = 0; j < headers.length; j++) {
-            row[headers[j]] = values[j].trim();
-        }
-        data.push(row);
-    }
-    return { data };
-  }
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -74,14 +49,21 @@ const DataManagement = () => {
         
         const reader = new FileReader();
         reader.onload = async (event) => {
-            const csvText = event.target.result;
+            const jsonText = event.target.result;
             try {
-                const results = manualParse(csvText);
-                setPreviewData(results.data);
-                setNotification({ message: 'Preview ready. Please confirm to import.', type: 'info' });
+                const parsedJson = JSON.parse(jsonText);
+                // Assuming the JSON is an array of objects
+                if (Array.isArray(parsedJson)) {
+                    setPreviewData(parsedJson);
+                    setNotification({ message: 'Preview ready. Please confirm to import.', type: 'info' });
+                } else {
+                    // Handle case where JSON is a single object
+                    setPreviewData([parsedJson]);
+                    setNotification({ message: 'Preview ready. Please confirm to import.', type: 'info' });
+                }
             } catch (error) {
-                setNotification({ message: `Error parsing file: ${error.message}`, type: 'error' });
-                console.error("Error parsing file: ", error);
+                setNotification({ message: `Error parsing JSON file: ${error.message}`, type: 'error' });
+                console.error("Error parsing JSON file: ", error);
                 setPreviewData([]);
             }
         };
@@ -139,7 +121,6 @@ const DataManagement = () => {
         setNotification({ message: 'Database Berhasil Diperbarui!', type: 'success' });
         setFile(null);
         setPreviewData([]);
-        // Re-fetch data to show the updates
         const fetchedData = await fetchData();
         if (fetchedData) {
             setData(fetchedData);
@@ -150,33 +131,23 @@ const DataManagement = () => {
     }
   };
 
-  const exportToCSV = () => {
+  const exportToJSON = () => {
     if (data.length === 0) {
         setNotification({ message: 'No data to export.', type: 'warning' });
         return;
     }
 
-    const headers = Object.keys(data[0]);
-    const csvContent = [
-        headers.join(','),
-        ...data.map(row => headers.map(header => JSON.stringify(row[header], replacer)).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const jsonContent = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', 'pohon_industri_data.csv');
+    link.setAttribute('download', 'pohon_industri_data.json');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     setNotification({ message: 'Data exported successfully!', type: 'success' });
   };
-
-  function replacer(key, value) {
-    return value === null || value === undefined ? '' : value;
-  }
-
 
   const renderTable = (tableData, title) => (
     <div className="my-4">
@@ -198,7 +169,7 @@ const DataManagement = () => {
                 <tr key={index}>
                   {Object.values(row).map((value, i) => (
                     <td key={i} className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                      <p className="text-gray-900 whitespace-no-wrap">{typeof value === 'object' ? JSON.stringify(value) : value}</p>
+                      <p className="text-gray-900 whitespace-no-wrap">{typeof value === 'object' ? JSON.stringify(value) : String(value)}</p>
                     </td>
                   ))}
                 </tr>
@@ -244,13 +215,13 @@ const DataManagement = () => {
 
       <div className="bg-white p-6 rounded-lg shadow mb-6">
         <h2 className="text-xl font-bold mb-4">Import & Export</h2>
-        <p className="mb-4 text-sm text-gray-600">Upload a CSV file with a ';' delimiter to update the 'pohon_industri' database. Required columns: cmdCode, Product Name, fobvalue (US$), Unit Value (US$/ton).</p>
+        <p className="mb-4 text-sm text-gray-600">Upload a JSON file to update the 'pohon_industri' database. The file should be an array of objects.</p>
         <div className="flex space-x-4 items-center">
             <div>
                 <label htmlFor="file-upload" className="cursor-pointer bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                    Choose CSV File
+                    Choose JSON File
                 </label>
-                <input id="file-upload" type="file" accept=".csv" className="hidden" onChange={handleFileChange} />
+                <input id="file-upload" type="file" accept=".json" className="hidden" onChange={handleFileChange} />
             </div>
             <button 
                 onClick={handleImport} 
@@ -259,8 +230,8 @@ const DataManagement = () => {
             >
                 Upload Data
             </button>
-            <button onClick={exportToCSV} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-                Export Data (CSV)
+            <button onClick={exportToJSON} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                Export Data (JSON)
             </button>
         </div>
         {file && (
