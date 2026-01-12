@@ -9,23 +9,45 @@ const buildTree = (nodes) => {
     const nodeMap = new Map(nodes.map(node => [node.id, { ...node, children: [] }]));
     const tree = [];
 
+    const hasCycle = (child, parent) => {
+        let current = parent;
+        while (current) {
+            if (current.id === child.id) return true;
+            current = nodeMap.get(current.parentId);
+        }
+        return false;
+    };
+
     nodeMap.forEach(node => {
         if (node.parentId && nodeMap.has(node.parentId)) {
             const parent = nodeMap.get(node.parentId);
             if (parent) {
-                parent.children.push(node);
+                if (hasCycle(node, parent)) {
+                    console.warn("Cycle detected! Skipping node:", node.id, "to prevent infinite loop.");
+                    tree.push(node); // Treat as a root node to avoid losing it
+                } else {
+                    parent.children.push(node);
+                }
             }
         } else {
             tree.push(node);
         }
     });
     
+    const compareNodes = (a, b) => {
+        const nameA = String(a.name || '').toUpperCase();
+        const nameB = String(b.name || '').toUpperCase();
+        if (nameA < nameB) return -1;
+        if (nameA > nameB) return 1;
+        return 0;
+    };
+
     nodeMap.forEach(node => {
         if (node.children) {
-            node.children.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+            node.children.sort(compareNodes);
         }
     });
-    tree.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    tree.sort(compareNodes);
 
     return tree;
 };
