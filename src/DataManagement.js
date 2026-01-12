@@ -6,6 +6,8 @@ import { ArrowLeft } from 'lucide-react';
 
 const DataManagement = () => {
   const [data, setData] = useState([]);
+  const [previewData, setPreviewData] = useState([]);
+  const [file, setFile] = useState(null);
   const [notification, setNotification] = useState({ message: '', type: '' });
   const [user, setUser] = useState(null);
 
@@ -52,68 +54,79 @@ const DataManagement = () => {
     return { data };
   }
 
-  const handleUpload = (file) => {
-    if (!file) {
-        setNotification({ message: 'Please select a file to upload.', type: 'warning' });
-        return;
-    }
-    
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        const csvText = e.target.result;
-        try {
-            const results = manualParse(csvText);
-            const batch = writeBatch(db);
-            
-            results.data.forEach((row) => {
-              if (!row.cmdCode) return;
-      
-              const code = row.cmdCode.toString();
-              let parentId = "ROOT";
-      
-              // LOGIKA PEMETAAN OTOMATIS BERDASARKAN HS CODE
-              if (code.startsWith("7219") || code.startsWith("7220")) {
-                parentId = "7218"; // Produk Stainless Steel Flat-rolled anaknya Ingot (7218)
-              } else if (code.startsWith("7304") || code.startsWith("7306")) {
-                parentId = "7219"; // Pipa (73) anaknya HRC (7219)
-              } else if (code.startsWith("7214") || code.startsWith("7216")) {
-                parentId = "7206"; // Steel Bar anaknya Iron Ingot (7206)
-              } else if (code === "7206" || code === "7218") {
-                parentId = "7201"; // Ingot anaknya Pig Iron/Ferro Alloy (7201/7202)
-              }
-      
-              const docRef = doc(db, "pohon_industri", code);
-              batch.set(docRef, {
-                name: row['Product Name'],
-                fobValue: row['fobvalue (US$)'],
-                unitValue: row['Unit Value (US$/ton)'],
-                parentId: parentId,
-                cmdCode: code
-              });
-            });
-      
-            await batch.commit();
-            setNotification({ message: 'Database Berhasil Diperbarui!', type: 'success' });
-            fetchData(); // Refresh data
-        } catch (error) {
-            setNotification({ message: `Error processing file: ${error.message}`, type: 'error' });
-            console.error("Error processing file: ", error);
-        }
-    };
-    reader.onerror = (e) => {
-        setNotification({ message: `Error reading file: ${e.target.error.name}`, type: 'error' });
-        console.error("Error reading file:", e.target.error);
-    };
-    reader.readAsText(file);
-  };
-
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
-        handleUpload(selectedFile);
+        setFile(selectedFile);
+        setNotification({ message: 'File selected. Ready for preview.', type: 'info' });
+        
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            const csvText = event.target.result;
+            try {
+                const results = manualParse(csvText);
+                setPreviewData(results.data);
+                setNotification({ message: 'Preview ready. Please confirm to import.', type: 'info' });
+            } catch (error) {
+                setNotification({ message: `Error parsing file: ${error.message}`, type: 'error' });
+                console.error("Error parsing file: ", error);
+                setPreviewData([]);
+            }
+        };
+        reader.onerror = (e) => {
+            setNotification({ message: `Error reading file: ${e.target.error.name}`, type: 'error' });
+            console.error("Error reading file:", e.target.error);
+        };
+        reader.readAsText(selectedFile);
     }
   };
   
+  const handleImport = async () => {
+    if (previewData.length === 0) {
+        setNotification({ message: 'No data to import.', type: 'warning' });
+        return;
+    }
+
+    const batch = writeBatch(db);
+    previewData.forEach((row) => {
+        if (!row.cmdCode) return;
+
+        const code = row.cmdCode.toString();
+        let parentId = "ROOT";
+
+        // LOGIKA PEMETAAN OTOMATIS BERDASARKAN HS CODE
+        if (code.startsWith("7219") || code.startsWith("7220")) {
+        parentId = "7218";
+        } else if (code.startsWith("7304") || code.startsWith("7306")) {
+        parentId = "7219";
+        } else if (code.startsWith("7214") || code.startsWith("7216")) {
+        parentId = "7206";
+        } else if (code === "7206" || code === "7218") {
+        parentId = "7201";
+        }
+
+        const docRef = doc(db, "pohon_industri", code);
+        batch.set(docRef, {
+        name: row['Product Name'],
+        fobValue: row['fobvalue (US$)'],
+        unitValue: row['Unit Value (US$/ton)'],
+        parentId: parentId,
+        cmdCode: code
+        });
+    });
+
+    try {
+        await batch.commit();
+        setNotification({ message: 'Database Berhasil Diperbarui!', type: 'success' });
+        setFile(null);
+        setPreviewData([]);
+        fetchData(); // Refresh data
+    } catch (error) {
+        setNotification({ message: `Error updating database: ${error.message}`, type: 'error' });
+        console.error("Error committing batch: ", error);
+    }
+  };
+
   const exportToCSV = () => {
     if (data.length === 0) {
         setNotification({ message: 'No data to export.', type: 'warning' });
@@ -199,6 +212,7 @@ const DataManagement = () => {
         <div className={`p-4 mb-4 text-sm rounded-lg ${ 
             notification.type === 'success' ? 'bg-green-100 text-green-700' :
             notification.type === 'error' ? 'bg-red-100 text-red-700' :
+            notification.type === 'info' ? 'bg-blue-100 text-blue-700' :
             'bg-yellow-100 text-yellow-700'
         }`} role="alert">
           {notification.message}
@@ -208,19 +222,31 @@ const DataManagement = () => {
       <div className="bg-white p-6 rounded-lg shadow mb-6">
         <h2 className="text-xl font-bold mb-4">Import & Export</h2>
         <p className="mb-4 text-sm text-gray-600">Upload a CSV file with a ';' delimiter to update the 'pohon_industri' database. Required columns: cmdCode, Product Name, fobvalue (US$), Unit Value (US$/ton).</p>
-        <div className="flex space-x-4">
+        <div className="flex space-x-4 items-center">
             <div>
                 <label htmlFor="file-upload" className="cursor-pointer bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                    Upload CSV
+                    Choose CSV File
                 </label>
                 <input id="file-upload" type="file" accept=".csv" className="hidden" onChange={handleFileChange} />
             </div>
+            {file && (
+                <p className="text-sm text-gray-500">Selected: {file.name}</p>
+            )}
             <button onClick={exportToCSV} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
                 Export Data (CSV)
             </button>
         </div>
       </div>
       
+      {previewData.length > 0 && (
+        <div className="bg-white p-6 rounded-lg shadow mb-6">
+            {renderTable(previewData, "Data Preview")}
+            <button onClick={handleImport} className="mt-4 bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded">
+                Confirm Import
+            </button>
+        </div>
+      )}
+
       {renderTable(data, "Data from Firestore 'pohon_industri'")}
 
     </div>
