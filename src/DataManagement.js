@@ -12,21 +12,33 @@ const DataManagement = () => {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
+    const loadData = async () => {
+        const fetchedData = await fetchData();
+        if (fetchedData) {
+            setData(fetchedData);
+        }
+    };
+
     const userData = sessionStorage.getItem('user');
     if (userData) {
       setUser(JSON.parse(userData));
-      fetchData();
+      loadData();
     }
   }, []);
 
   const fetchData = async () => {
     try {
-      const dataCollection = collection(db, 'pohon_industri');
-      const dataSnapshot = await getDocs(dataCollection);
-      const dataList = dataSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setData(dataList);
+      // Pastikan "pohon_industri" sama persis dengan yang ada di Cloud Firestore
+      const querySnapshot = await getDocs(collection(db, "pohon_industri"));
+      const dataList = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      console.log("Data dari Firebase:", dataList);
+      return dataList;
     } catch (error) {
-      console.error("Error fetching data: ", error);
+      console.error("Error mengambil data:", error.message);
       setNotification({ message: `Error fetching data from Firestore: ${error.message}`, type: 'error' });
     }
   };
@@ -56,36 +68,28 @@ const DataManagement = () => {
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
-    alert("handleFileChange called.");
     if (selectedFile) {
         setFile(selectedFile);
         setNotification({ message: 'File selected. Reading file...', type: 'info' });
-        alert(`File selected: ${selectedFile.name}`);
         
         const reader = new FileReader();
         reader.onload = async (event) => {
-            alert("FileReader onload event fired.");
             const csvText = event.target.result;
             try {
                 const results = manualParse(csvText);
-                alert(`Parsing successful. Found ${results.data.length} rows.`);
                 setPreviewData(results.data);
                 setNotification({ message: 'Preview ready. Please confirm to import.', type: 'info' });
             } catch (error) {
-                alert(`Error parsing file: ${error.message}`);
                 setNotification({ message: `Error parsing file: ${error.message}`, type: 'error' });
                 console.error("Error parsing file: ", error);
                 setPreviewData([]);
             }
         };
         reader.onerror = (e) => {
-            alert(`FileReader error: ${e.target.error.name}`);
             setNotification({ message: `Error reading file: ${e.target.error.name}`, type: 'error' });
             console.error("Error reading file:", e.target.error);
         };
         reader.readAsText(selectedFile);
-    } else {
-        alert("No file selected.");
     }
   };
   
@@ -113,13 +117,20 @@ const DataManagement = () => {
         parentId = "7201";
         }
 
+        const cleanAndParse = (value) => {
+            if (typeof value !== 'string') return value;
+            const cleaned = value.replace(/\./g, '').replace(',', '.');
+            const number = parseFloat(cleaned);
+            return isNaN(number) ? 0 : number;
+        };
+
         const docRef = doc(db, "pohon_industri", code);
         batch.set(docRef, {
-        name: row['Product Name'],
-        fobValue: row['fobvalue (US$)'],
-        unitValue: row['Unit Value (US$/ton)'],
-        parentId: parentId,
-        cmdCode: code
+            name: row['Product Name'],
+            fobValue: cleanAndParse(row['fobvalue (US$)']),
+            unitValue: cleanAndParse(row['Unit Value (US$/ton)']),
+            parentId: parentId,
+            cmdCode: code
         });
     });
 
@@ -128,7 +139,11 @@ const DataManagement = () => {
         setNotification({ message: 'Database Berhasil Diperbarui!', type: 'success' });
         setFile(null);
         setPreviewData([]);
-        fetchData(); // Refresh data
+        // Re-fetch data to show the updates
+        const fetchedData = await fetchData();
+        if (fetchedData) {
+            setData(fetchedData);
+        }
     } catch (error) {
         setNotification({ message: `Error updating database: ${error.message}`, type: 'error' });
         console.error("Error committing batch: ", error);
