@@ -22,13 +22,6 @@ import {
     Line
 } from 'recharts';
 import {
-    Search,
-    Globe,
-    ShieldCheck,
-    ArrowRight,
-    Zap,
-    Calculator,
-    AlertTriangle,
     ChevronRight,
     Info,
     Database,
@@ -52,7 +45,8 @@ import {
     Target,
     Activity,
     Award,
-    Map
+    Map,
+    ChevronDown
 } from 'lucide-react';
 
 // Database Komoditas Utama (Dataset Detail dari Dokumen)
@@ -122,6 +116,7 @@ const COLORS = ['#dc2626', '#ef4444', '#f87171', '#fca5a5'];
 const Dashboard = () => {
     const [activeDashTab, setActiveDashTab] = useState('hilirisasi');
     const [user, setUser] = useState(null);
+    const [isHilirisasiOpen, setHilirisasiOpen] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -160,9 +155,24 @@ const Dashboard = () => {
                     <NavItem active = { activeDashTab === 'sektoral' } onClick = {() => setActiveDashTab('sektoral')} icon = { < Landmark size = { 18 } />} label="Data Sektoral" />
                     <NavItem active = { activeDashTab === 'performance' } onClick = {() => setActiveDashTab('performance')} icon = { < Activity size = { 18 } />} label="Performa Ekspor" />
                                         <NavItem active={activeDashTab === 'gis'} onClick={() => setActiveDashTab('gis')} icon={<Map size={18} />} label="Pemetaan GIS" />
-                                        <button onClick={() => navigate('/data-management')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[11px] font-black uppercase transition-all text-slate-500 hover:bg-slate-50`}>
-                                            <Database size={18} /> Manajemen Data
-                                        </button>
+                                        <div className="relative">
+                                            <button onClick={() => setHilirisasiOpen(!isHilirisasiOpen)} className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl text-[11px] font-black uppercase transition-all text-slate-500 hover:bg-slate-50`}>
+                                                <div className="flex items-center gap-3">
+                                                    <Database size={18} /> Manajemen Hilirisasi
+                                                </div>
+                                                <ChevronDown size={18} className={`transition-transform ${isHilirisasiOpen ? 'rotate-180' : ''}`} />
+                                            </button>
+                                            {isHilirisasiOpen && (
+                                                <div className="pl-8 pt-2 space-y-2">
+                                                    <button onClick={() => navigate('/data-management')} className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl text-[10px] font-bold uppercase transition-all text-slate-500 hover:bg-slate-100`}>
+                                                        Manajemen Data
+                                                    </button>
+                                                    <button onClick={() => navigate('/pohon-industri')} className={`w-full flex items-center gap-3 px-4 py-2 rounded-xl text-[10px] font-bold uppercase transition-all text-slate-500 hover:bg-slate-100`}>
+                                                        Pohon Industri
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
                                     </nav>
                                     <div className="mt-auto pt-6 border-t border-slate-50">
                                         <div onClick={() => navigate('/profile')} className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl mb-4 cursor-pointer hover:bg-slate-100 transition-colors">

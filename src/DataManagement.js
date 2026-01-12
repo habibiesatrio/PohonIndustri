@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { db } from './firebase'; // Assuming firebase.js exports a db object
 import { collection, addDoc, getDocs } from 'firebase/firestore';
+import { Link } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 
 const DataManagement = () => {
   const [data, setData] = useState([]);
@@ -174,7 +176,13 @@ const DataManagement = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Data Management</h1>
+        <div className="flex justify-between items-center mb-4">
+            <h1 className="text-2xl font-bold">Data Management</h1>
+            <Link to="/dashboard" className="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2 px-4 rounded-lg transition-colors">
+                <ArrowLeft size={18} />
+                Back to Dashboard
+            </Link>
+        </div>
 
       {notification.message && (
         <div className={`p-4 mb-4 text-sm rounded-lg ${ 
@@ -187,24 +195,34 @@ const DataManagement = () => {
         </div>
       )}
 
-      <div className="flex space-x-2 mb-4">
-        <div>
-          <label htmlFor="file-upload" className="cursor-pointer bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-            Choose File (CSV/JSON)
-          </label>
-          <input id="file-upload" type="file" accept=".csv,.json" className="hidden" onChange={handleFileChange} />
+      <div className="bg-white p-6 rounded-lg shadow mb-6">
+        <h2 className="text-xl font-bold mb-4">Import & Export</h2>
+        <div className="flex space-x-4">
+            <div>
+            <label htmlFor="file-upload" className="cursor-pointer bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Choose File (CSV/JSON)
+            </label>
+            <input id="file-upload" type="file" accept=".csv,.json" className="hidden" onChange={handleFileChange} />
+            </div>
+            {file && (
+                <button 
+                    onClick={handleImport} 
+                    className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded disabled:bg-purple-300"
+                    disabled={previewData.length === 0}
+                >
+                    Import Data
+                </button>
+            )}
+            <button onClick={exportToCSV} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+            Export Data (CSV)
+            </button>
         </div>
-        <button onClick={exportToCSV} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-          Export Data (CSV)
-        </button>
+        {file && <p className="text-sm text-gray-500 mt-2">Selected file: {file.name}</p>}
       </div>
       
       {previewData.length > 0 && (
         <div>
           {renderTable(previewData, "Data Preview")}
-          <button onClick={handleImport} className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded mt-2">
-            Confirm Import
-          </button>
         </div>
       )}
 

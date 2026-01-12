@@ -6,6 +6,7 @@ import Dashboard from './Dashboard';
 import Daftar from './Daftar';
 import Profile from './Profile';
 import DataManagement from './DataManagement';
+import PohonIndustri from './PohonIndustri';
 
 function App() {
     return (
@@ -16,6 +17,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/data-management" element={<DataManagement />} />
+            <Route path="/pohon-industri" element={<PohonIndustri />} />
         </Routes>
     );
 }
