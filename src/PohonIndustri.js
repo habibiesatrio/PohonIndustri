@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from './firebase';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Minus, Plus, FileText, Folder, FolderOpen, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Minus, Plus, FileText, Folder, FolderOpen } from 'lucide-react';
 
-// Helper function to build the tree from a flat list of nodes
+// Helper function to build the tree from a flat list of nodes, with cycle detection
 const buildTree = (nodes) => {
     const nodeMap = new Map(nodes.map(node => [node.id, { ...node, children: [] }]));
     const tree = [];
@@ -54,7 +54,7 @@ const buildTree = (nodes) => {
 
 // Recursive TreeNode Component
 const TreeNode = ({ node, level, onNodeSelect, selectedNode }) => {
-    const [isOpen, setIsOpen] = useState(level < 1); // Auto-expand root and first level
+    const [isOpen, setIsOpen] = useState(level < 1);
 
     const hasChildren = node.children && node.children.length > 0;
     const isSelected = selectedNode && selectedNode.id === node.id;
@@ -99,6 +99,7 @@ const TreeNode = ({ node, level, onNodeSelect, selectedNode }) => {
     );
 };
 
+// Detail View Component
 const DetailView = ({ node }) => {
     return (
         <div className="space-y-4 animate-in fade-in duration-300">
@@ -142,12 +143,7 @@ const PohonIndustri = () => {
     useEffect(() => {
         const q = query(collection(db, "pohon_industri"));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            console.log("Received snapshot from Firestore...");
-            const dataList = querySnapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
-            
+            const dataList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             if (dataList.length > 0) {
                 const tree = buildTree(dataList);
                 setTreeData(tree);
@@ -159,8 +155,6 @@ const PohonIndustri = () => {
             console.error("Error fetching realtime data: ", error);
             setLoading(false);
         });
-
-        // Cleanup subscription on unmount
         return () => unsubscribe();
     }, []);
 
