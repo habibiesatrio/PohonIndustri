@@ -75,62 +75,75 @@ const DataManagement = () => {
     }
   };
   
-  const handleImport = async () => {
-    if (previewData.length === 0) {
-        setNotification({ message: 'No data to import.', type: 'warning' });
-        return;
-    }
-
-    const batch = writeBatch(db);
-    previewData.forEach((row) => {
-        if (!row.cmdCode) return;
-
-        const code = row.cmdCode.toString();
-        let parentId = "ROOT";
-
-        // LOGIKA PEMETAAN OTOMATIS BERDASARKAN HS CODE
-        if (code.startsWith("7219") || code.startsWith("7220")) {
-        parentId = "7218";
-        } else if (code.startsWith("7304") || code.startsWith("7306")) {
-        parentId = "7219";
-        } else if (code.startsWith("7214") || code.startsWith("7216")) {
-        parentId = "7206";
-        } else if (code === "7206" || code === "7218") {
-        parentId = "7201";
-        }
-
-        const cleanAndParse = (value) => {
-            if (typeof value !== 'string') return value;
-            const cleaned = value.replace(/\./g, '').replace(',', '.');
-            const number = parseFloat(cleaned);
-            return isNaN(number) ? 0 : number;
-        };
-
-        const docRef = doc(db, "pohon_industri", code);
-        batch.set(docRef, {
-            name: row['Product Name'],
-            fobValue: cleanAndParse(row['fobvalue (US$)']),
-            unitValue: cleanAndParse(row['Unit Value (US$/ton)']),
-            parentId: parentId,
-            cmdCode: code
-        });
-    });
-
-    try {
-        await batch.commit();
-        setNotification({ message: 'Database Berhasil Diperbarui!', type: 'success' });
-        setFile(null);
-        setPreviewData([]);
-        const fetchedData = await fetchData();
-        if (fetchedData) {
-            setData(fetchedData);
-        }
-    } catch (error) {
-        setNotification({ message: `Error updating database: ${error.message}`, type: 'error' });
-        console.error("Error committing batch: ", error);
-    }
-  };
-
+    const handleImport = async () => {
+      if (previewData.length === 0) {
+          setNotification({ message: 'No data to import.', type: 'warning' });
+          return;
+      }
+      console.log("Starting import process...");
+  
+      const batch = writeBatch(db);
+      previewData.forEach((row, index) => {
+          console.log(`Processing row ${index}:`, row);
+          if (!row.cmdCode) {
+              console.warn(`Skipping row ${index} due to missing cmdCode.`);
+              return;
+          }
+  
+          const code = row.cmdCode.toString();
+          let parentId = "ROOT";
+  
+          // LOGIKA PEMETAAN OTOMATIS BERDASARKAN HS CODE
+          if (code.startsWith("7219") || code.startsWith("7220")) {
+          parentId = "7218";
+          } else if (code.startsWith("7304") || code.startsWith("7306")) {
+          parentId = "7219";
+          } else if (code.startsWith("7214") || code.startsWith("7216")) {
+          parentId = "7206";
+          } else if (code === "7206" || code === "7218") {
+          parentId = "7201";
+          }
+  
+          const cleanAndParse = (value) => {
+              if (typeof value !== 'string') return value;
+              const cleaned = value.replace(/\./g, '').replace(',', '.');
+              const number = parseFloat(cleaned);
+              return isNaN(number) ? 0 : number;
+          };
+  
+          // Fallback for potentially malformed keys from different file origins
+          const name = row['Product Name'] || row['Product\nName'];
+          const fobValue = row['fobvalue (US$)'] || row['fobvalue\n(US$)'];
+          const unitValue = row['Unit Value (US$/ton)'] || row['Unit\nValue (US$/ton)'];
+  
+          console.log(`Extracted values for row ${index}:`, { name, fobValue, unitValue });
+  
+          const docRef = doc(db, "pohon_industri", code);
+          batch.set(docRef, {
+              name: name,
+              fobValue: cleanAndParse(fobValue),
+              unitValue: cleanAndParse(unitValue),
+              parentId: parentId,
+              cmdCode: code
+          });
+      });
+  
+      try {
+          await batch.commit();
+          setNotification({ message: 'Database Berhasil Diperbarui!', type: 'success' });
+          alert('Database Berhasil Diperbarui!');
+          setFile(null);
+          setPreviewData([]);
+          const fetchedData = await fetchData();
+          if (fetchedData) {
+              setData(fetchedData);
+          }
+      } catch (error) {
+          setNotification({ message: `Error updating database: ${error.message}`, type: 'error' });
+          alert(`Error updating database: ${error.message}`);
+          console.error("Error committing batch: ", error);
+      }
+    };
   const exportToJSON = () => {
     if (data.length === 0) {
         setNotification({ message: 'No data to export.', type: 'warning' });
