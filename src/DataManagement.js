@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { db } from './firebase'; // Assuming firebase.js exports a db object
-import { collection, addDoc, getDocs } from 'firebase/firestore';
+import { db } from './firebase';
+import { collection, getDocs, doc, writeBatch } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import Papa from 'papaparse';
 
 const DataManagement = () => {
   const [data, setData] = useState([]);
-  const [file, setFile] = useState(null);
-  const [previewData, setPreviewData] = useState([]);
   const [notification, setNotification] = useState({ message: '', type: '' });
   const [user, setUser] = useState(null);
 
@@ -21,7 +20,7 @@ const DataManagement = () => {
 
   const fetchData = async () => {
     try {
-      const dataCollection = collection(db, 'exportData');
+      const dataCollection = collection(db, 'pohon_industri');
       const dataSnapshot = await getDocs(dataCollection);
       const dataList = dataSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setData(dataList);
@@ -31,78 +30,67 @@ const DataManagement = () => {
     }
   };
 
+  const handleUpload = (file) => {
+    if (!file) {
+        setNotification({ message: 'Please select a file to upload.', type: 'warning' });
+        return;
+    }
+    Papa.parse(file, {
+      header: true,
+      delimiter: ";",
+      complete: async (results) => {
+        const batch = writeBatch(db);
+        
+        results.data.forEach((row) => {
+          if (!row.cmdCode) return;
+  
+          const code = row.cmdCode.toString();
+          let parentId = "ROOT";
+  
+          // LOGIKA PEMETAAN OTOMATIS BERDASARKAN HS CODE
+          if (code.startsWith("7219") || code.startsWith("7220")) {
+            parentId = "7218"; // Produk Stainless Steel Flat-rolled anaknya Ingot (7218)
+          } else if (code.startsWith("7304") || code.startsWith("7306")) {
+            parentId = "7219"; // Pipa (73) anaknya HRC (7219)
+          } else if (code.startsWith("7214") || code.startsWith("7216")) {
+            parentId = "7206"; // Steel Bar anaknya Iron Ingot (7206)
+          } else if (code === "7206" || code === "7218") {
+            parentId = "7201"; // Ingot anaknya Pig Iron/Ferro Alloy (7201/7202)
+          }
+  
+          const docRef = doc(db, "pohon_industri", code);
+          batch.set(docRef, {
+            name: row['Product Name'],
+            fobValue: row['fobvalue (US$)'],
+            unitValue: row['Unit Value (US$/ton)'],
+            parentId: parentId,
+            cmdCode: code
+          });
+        });
+  
+        try {
+            await batch.commit();
+            setNotification({ message: 'Database Berhasil Diperbarui!', type: 'success' });
+            fetchData(); // Refresh data
+        } catch (error) {
+            setNotification({ message: `Error updating database: ${error.message}`, type: 'error' });
+            console.error("Error committing batch: ", error);
+        }
+      },
+      error: (error) => {
+        setNotification({ message: `Error parsing CSV file: ${error.message}`, type: 'error' });
+        console.error("Error parsing file:", error);
+      }
+    });
+  };
+
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
-        const fileName = selectedFile.name.toLowerCase();
-        if (fileName.endsWith('.csv') || fileName.endsWith('.json')) {
-            setFile(selectedFile);
-            parseFile(selectedFile);
-        } else {
-            setNotification({ message: 'Unsupported file type. Please upload CSV or JSON.', type: 'error' });
-        }
+        handleUpload(selectedFile);
     }
   };
-
-  const parseFile = (file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const content = e.target.result;
-        const fileName = file.name.toLowerCase();
-        if (fileName.endsWith('.json')) {
-          const jsonData = JSON.parse(content);
-          setPreviewData(Array.isArray(jsonData) ? jsonData : [jsonData]);
-        } else if (fileName.endsWith('.csv')) {
-          // Basic CSV parsing
-          const lines = content.split('\n').filter(line => line.trim() !== '');
-          const headers = lines[0].split(',').map(h => h.trim());
-          const jsonData = lines.slice(1).map(line => {
-            const values = line.split(',').map(v => v.trim());
-            return headers.reduce((obj, header, i) => {
-              obj[header] = values[i];
-              return obj;
-            }, {});
-          });
-          setPreviewData(jsonData);
-        }
-        setNotification({ message: 'File ready for preview.', type: 'info' });
-      } catch (error) {
-        setNotification({ message: 'Error parsing file. Please check the file format.', type: 'error' });
-        console.error("Error parsing file:", error);
-      }
-    };
-
-    reader.readAsText(file);
-  };
-
-  const handleImport = async () => {
-    console.log("handleImport called");
-    if (previewData.length === 0) {
-      setNotification({ message: 'No data to import.', type: 'warning' });
-      console.log("No data to import");
-      return;
-    }
-
-    console.log("Importing data:", previewData);
-
-    try {
-      const dataCollection = collection(db, 'exportData');
-      for (const item of previewData) {
-        console.log("Importing item:", item);
-        await addDoc(dataCollection, item);
-      }
-      setNotification({ message: 'Data imported successfully!', type: 'success' });
-      console.log("Data imported successfully");
-      setFile(null);
-      setPreviewData([]);
-      fetchData(); // Refresh data from Firestore
-    } catch (error) {
-      setNotification({ message: `Error importing data to Firestore: ${error.message}`, type: 'error' });
-      console.error("Error importing data: ", error);
-    }
-  };
-
+  
   const exportToCSV = () => {
     if (data.length === 0) {
         setNotification({ message: 'No data to export.', type: 'warning' });
@@ -119,7 +107,7 @@ const DataManagement = () => {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', 'export_data.csv');
+    link.setAttribute('download', 'pohon_industri_data.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -177,7 +165,7 @@ const DataManagement = () => {
   return (
     <div className="container mx-auto p-4">
         <div className="flex justify-between items-center mb-4">
-            <h1 className="text-2xl font-bold">Data Management</h1>
+            <h1 className="text-2xl font-bold">Data Management for Pohon Industri</h1>
             <Link to="/dashboard" className="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2 px-4 rounded-lg transition-colors">
                 <ArrowLeft size={18} />
                 Back to Dashboard
@@ -188,7 +176,6 @@ const DataManagement = () => {
         <div className={`p-4 mb-4 text-sm rounded-lg ${ 
             notification.type === 'success' ? 'bg-green-100 text-green-700' :
             notification.type === 'error' ? 'bg-red-100 text-red-700' :
-            notification.type === 'info' ? 'bg-blue-100 text-blue-700' :
             'bg-yellow-100 text-yellow-700'
         }`} role="alert">
           {notification.message}
@@ -197,36 +184,21 @@ const DataManagement = () => {
 
       <div className="bg-white p-6 rounded-lg shadow mb-6">
         <h2 className="text-xl font-bold mb-4">Import & Export</h2>
+        <p className="mb-4 text-sm text-gray-600">Upload a CSV file with a ';' delimiter to update the 'pohon_industri' database. Required columns: cmdCode, Product Name, fobvalue (US$), Unit Value (US$/ton).</p>
         <div className="flex space-x-4">
             <div>
-            <label htmlFor="file-upload" className="cursor-pointer bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                Choose File (CSV/JSON)
-            </label>
-            <input id="file-upload" type="file" accept=".csv,.json" className="hidden" onChange={handleFileChange} />
+                <label htmlFor="file-upload" className="cursor-pointer bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    Upload CSV
+                </label>
+                <input id="file-upload" type="file" accept=".csv" className="hidden" onChange={handleFileChange} />
             </div>
-            {file && (
-                <button 
-                    onClick={handleImport} 
-                    className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded disabled:bg-purple-300"
-                    disabled={previewData.length === 0}
-                >
-                    Import Data
-                </button>
-            )}
             <button onClick={exportToCSV} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-            Export Data (CSV)
+                Export Data (CSV)
             </button>
         </div>
-        {file && <p className="text-sm text-gray-500 mt-2">Selected file: {file.name}</p>}
       </div>
       
-      {previewData.length > 0 && (
-        <div>
-          {renderTable(previewData, "Data Preview")}
-        </div>
-      )}
-
-      {renderTable(data, "Data from Firestore")}
+      {renderTable(data, "Data from Firestore 'pohon_industri'")}
 
     </div>
   );
