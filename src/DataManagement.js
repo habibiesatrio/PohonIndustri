@@ -3,7 +3,6 @@ import { db } from './firebase';
 import { collection, getDocs, doc, writeBatch } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import Papa from 'papaparse';
 
 const DataManagement = () => {
   const [data, setData] = useState([]);
@@ -30,58 +29,82 @@ const DataManagement = () => {
     }
   };
 
+  const manualParse = (csvText) => {
+    const lines = csvText.split(/[\r\n]+/).filter(line => line.trim() !== '');
+    if (lines.length < 2) {
+        throw new Error("CSV must have a header and at least one data row.");
+    }
+    const delimiter = ';';
+    const headers = lines[0].trim().split(delimiter);
+    const data = [];
+    for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].trim().split(delimiter);
+        if (values.length !== headers.length) {
+            console.warn(`Skipping malformed row ${i + 1}: ${lines[i]}`);
+            continue;
+        }
+        const row = {};
+        for (let j = 0; j < headers.length; j++) {
+            row[headers[j].trim()] = values[j].trim();
+        }
+        data.push(row);
+    }
+    return { data };
+  }
+
   const handleUpload = (file) => {
     if (!file) {
         setNotification({ message: 'Please select a file to upload.', type: 'warning' });
         return;
     }
-    Papa.parse(file, {
-      header: true,
-      delimiter: ";",
-      complete: async (results) => {
-        const batch = writeBatch(db);
-        
-        results.data.forEach((row) => {
-          if (!row.cmdCode) return;
-  
-          const code = row.cmdCode.toString();
-          let parentId = "ROOT";
-  
-          // LOGIKA PEMETAAN OTOMATIS BERDASARKAN HS CODE
-          if (code.startsWith("7219") || code.startsWith("7220")) {
-            parentId = "7218"; // Produk Stainless Steel Flat-rolled anaknya Ingot (7218)
-          } else if (code.startsWith("7304") || code.startsWith("7306")) {
-            parentId = "7219"; // Pipa (73) anaknya HRC (7219)
-          } else if (code.startsWith("7214") || code.startsWith("7216")) {
-            parentId = "7206"; // Steel Bar anaknya Iron Ingot (7206)
-          } else if (code === "7206" || code === "7218") {
-            parentId = "7201"; // Ingot anaknya Pig Iron/Ferro Alloy (7201/7202)
-          }
-  
-          const docRef = doc(db, "pohon_industri", code);
-          batch.set(docRef, {
-            name: row['Product Name'],
-            fobValue: row['fobvalue (US$)'],
-            unitValue: row['Unit Value (US$/ton)'],
-            parentId: parentId,
-            cmdCode: code
-          });
-        });
-  
+    
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const csvText = e.target.result;
         try {
+            const results = manualParse(csvText);
+            const batch = writeBatch(db);
+            
+            results.data.forEach((row) => {
+              if (!row.cmdCode) return;
+      
+              const code = row.cmdCode.toString();
+              let parentId = "ROOT";
+      
+              // LOGIKA PEMETAAN OTOMATIS BERDASARKAN HS CODE
+              if (code.startsWith("7219") || code.startsWith("7220")) {
+                parentId = "7218"; // Produk Stainless Steel Flat-rolled anaknya Ingot (7218)
+              } else if (code.startsWith("7304") || code.startsWith("7306")) {
+                parentId = "7219"; // Pipa (73) anaknya HRC (7219)
+              } else if (code.startsWith("7214") || code.startsWith("7216")) {
+                parentId = "7206"; // Steel Bar anaknya Iron Ingot (7206)
+              } else if (code === "7206" || code === "7218") {
+                parentId = "7201"; // Ingot anaknya Pig Iron/Ferro Alloy (7201/7202)
+              }
+      
+              const docRef = doc(db, "pohon_industri", code);
+              batch.set(docRef, {
+                name: row['Product Name'],
+                fobValue: row['fobvalue (US$)'],
+                unitValue: row['Unit Value (US$/ton)'],
+                parentId: parentId,
+                cmdCode: code
+              });
+            });
+      
             await batch.commit();
             setNotification({ message: 'Database Berhasil Diperbarui!', type: 'success' });
             fetchData(); // Refresh data
         } catch (error) {
-            setNotification({ message: `Error updating database: ${error.message}`, type: 'error' });
-            console.error("Error committing batch: ", error);
+            setNotification({ message: `Error processing file: ${error.message}`, type: 'error' });
+            console.error("Error processing file: ", error);
         }
-      },
-      error: (error) => {
-        setNotification({ message: `Error parsing CSV file: ${error.message}`, type: 'error' });
-        console.error("Error parsing file:", error);
-      }
-    });
+    };
+    reader.onerror = (e) => {
+        setNotification({ message: `Error reading file: ${e.target.error.name}`, type: 'error' });
+        console.error("Error reading file:", e.target.error);
+    };
+    reader.readAsText(file);
   };
 
   const handleFileChange = (e) => {
