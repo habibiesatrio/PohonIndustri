@@ -229,21 +229,25 @@ const DataManagement = () => {
                 </label>
                 <input id="file-upload" type="file" accept=".csv" className="hidden" onChange={handleFileChange} />
             </div>
-            {file && (
-                <p className="text-sm text-gray-500">Selected: {file.name}</p>
-            )}
+            <button 
+                onClick={handleImport} 
+                className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded disabled:bg-purple-300 disabled:cursor-not-allowed"
+                disabled={previewData.length === 0}
+            >
+                Upload Data
+            </button>
             <button onClick={exportToCSV} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
                 Export Data (CSV)
             </button>
         </div>
+        {file && (
+            <p className="text-sm text-gray-500 mt-4">Selected: {file.name}</p>
+        )}
       </div>
       
       {previewData.length > 0 && (
         <div className="bg-white p-6 rounded-lg shadow mb-6">
             {renderTable(previewData, "Data Preview")}
-            <button onClick={handleImport} className="mt-4 bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded">
-                Upload Data
-            </button>
         </div>
       )}
 
