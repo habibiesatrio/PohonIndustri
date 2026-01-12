@@ -242,7 +242,7 @@ const DataManagement = () => {
         <div className="bg-white p-6 rounded-lg shadow mb-6">
             {renderTable(previewData, "Data Preview")}
             <button onClick={handleImport} className="mt-4 bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded">
-                Confirm Import
+                Upload Data
             </button>
         </div>
       )}
