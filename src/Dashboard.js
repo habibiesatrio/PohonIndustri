@@ -129,17 +129,6 @@ const Dashboard = () => {
                             <MetricCard label="Nilai Tambah Agregat" val="35.4x" sub="Target: 50x" icon={<TrendingUp className="text-emerald-600" />} />
                             <MetricCard label="Status Swasembada" val="64%" sub="Proyeksi 2026" icon={<Globe className="text-amber-600" />} />
                         </div>
-                        
-                        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 text-center">
-                            <h3 className="text-2xl font-bold text-slate-800">Visualisasi Pohon Industri</h3>
-                            <p className="text-slate-500 mt-2 mb-6">Buka halaman visualisasi interaktif untuk melihat hubungan hulu-hilir industri nasional.</p>
-                            <button 
-                                onClick={() => navigate('/pohon-industri')} 
-                                className="bg-red-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-red-700 transition-all flex items-center gap-2 mx-auto"
-                            >
-                                Buka Pohon Industri <ArrowRight size={18} />
-                            </button>
-                        </div>
                     </div>
                 )}
                 {activeDashTab === 'paten' && <div className="bg-white p-8 rounded-2xl"><h2 className="font-bold text-xl">Analitik Paten</h2><p>Content for this tab goes here.</p></div>}
