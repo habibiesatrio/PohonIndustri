@@ -25,13 +25,21 @@ const Login = () => {
                         if (snapshot.exists()) {
                             const userData = snapshot.val();
                             const combinedUser = { ...user, ...userData };
+                            console.log("Storing user data in session storage:", combinedUser);
                             sessionStorage.setItem('user', JSON.stringify(combinedUser));
                             navigate('/dashboard');
                         } else {
                             // Handle case where user data doesn't exist in realtime database
+                            console.log("Storing user data in session storage (no RTDB data):", user);
                             sessionStorage.setItem('user', JSON.stringify(user));
                             navigate('/dashboard');
                         }
+                    }).catch(error => {
+                        console.error("Error fetching user data from RTDB:", error);
+                        setMessage('Gagal mengambil data pengguna.');
+                        // Still navigate, but with basic user info
+                        sessionStorage.setItem('user', JSON.stringify(user));
+                        navigate('/dashboard');
                     });
                 })
                 .catch((error) => {
