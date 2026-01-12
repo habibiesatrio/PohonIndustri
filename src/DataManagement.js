@@ -35,7 +35,7 @@ const DataManagement = () => {
         throw new Error("CSV must have a header and at least one data row.");
     }
     const delimiter = ';';
-    const headers = lines[0].trim().split(delimiter);
+    const headers = lines[0].trim().split(delimiter).map(h => h.replace(/\n/g, ' ').trim());
     const data = [];
     for (let i = 1; i < lines.length; i++) {
         const values = lines[i].trim().split(delimiter);
@@ -45,7 +45,7 @@ const DataManagement = () => {
         }
         const row = {};
         for (let j = 0; j < headers.length; j++) {
-            row[headers[j].trim()] = values[j].trim();
+            row[headers[j]] = values[j].trim();
         }
         data.push(row);
     }
