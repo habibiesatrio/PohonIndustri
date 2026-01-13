@@ -1,202 +1,304 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import ReactFlow, { 
+    Background, 
+    Controls, 
+    useNodesState, 
+    useEdgesState, 
+    ReactFlowProvider, // Tambahkan ini
+    useViewport // Tambahkan ini
+} from 'reactflow';
+import 'reactflow/dist/style.css';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { db } from './firebase';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, Minus, Plus, FileText, Folder, FolderOpen } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { 
+    GitMerge, LayoutDashboard, Search, X, 
+    ArrowUp, ArrowDown, Database, LogOut, 
+    Bell, Settings, Download 
+} from 'lucide-react';
+import IndustrialNode from './IndustrialNode';
 
-// Helper function to build the tree from a flat list of nodes, with cycle detection
-const buildTree = (nodes) => {
-    const nodeMap = new Map(nodes.map(node => [node.id, { ...node, children: [] }]));
-    const tree = [];
+const nodeTypes = { industrial: IndustrialNode };
 
-    const hasCycle = (child, parent) => {
-        let current = parent;
-        while (current) {
-            if (current.id === child.id) return true;
-            current = nodeMap.get(current.parentId);
-        }
-        return false;
-    };
-
-    nodeMap.forEach(node => {
-        if (node.parentId && nodeMap.has(node.parentId)) {
-            const parent = nodeMap.get(node.parentId);
-            if (parent) {
-                if (hasCycle(node, parent)) {
-                    console.warn("Cycle detected! Skipping node:", node.id, "to prevent infinite loop.");
-                    tree.push(node); // Treat as a root node to avoid losing it
-                } else {
-                    parent.children.push(node);
-                }
-            }
-        } else {
-            tree.push(node);
-        }
-    });
-    
-    const compareNodes = (a, b) => {
-        const nameA = String(a.name || '').toUpperCase();
-        const nameB = String(b.name || '').toUpperCase();
-        if (nameA < nameB) return -1;
-        if (nameA > nameB) return 1;
-        return 0;
-    };
-
-    nodeMap.forEach(node => {
-        if (node.children) {
-            node.children.sort(compareNodes);
-        }
-    });
-    tree.sort(compareNodes);
-
-    return tree;
-};
-
-// Recursive TreeNode Component
-const TreeNode = ({ node, level, onNodeSelect, selectedNode }) => {
-    const [isOpen, setIsOpen] = useState(level < 1);
-
-    const hasChildren = node.children && node.children.length > 0;
-    const isSelected = selectedNode && selectedNode.id === node.id;
-
-    const handleToggle = (e) => {
-        e.stopPropagation();
-        setIsOpen(!isOpen);
-    };
-    
-    const handleSelect = (e) => {
-        e.stopPropagation();
-        onNodeSelect(node);
-    };
-
+// --- KOMPONEN INTERNAL UNTUK ZOOM PERCENTAGE ---
+const ZoomDisplay = () => {
+    const { zoom } = useViewport();
     return (
-        <div style={{ marginLeft: `${level * 20}px` }}>
-            <div 
-                onClick={handleSelect}
-                className={`flex items-center space-x-2 py-1.5 px-2 rounded-md cursor-pointer transition-colors ${isSelected ? 'bg-red-100' : 'hover:bg-slate-100'}`}
-            >
-                {hasChildren ? (
-                    <span onClick={handleToggle} className="p-0.5 hover:bg-slate-200 rounded">
-                        {isOpen ? <Minus size={14} /> : <Plus size={14} />}
-                    </span>
-                ) : <span className="w-[18px]"></span>}
-                
-                {hasChildren ? 
-                    (isOpen ? <FolderOpen size={16} className="text-amber-500" /> : <Folder size={16} className="text-amber-500" />) : 
-                    <FileText size={16} className="text-slate-500" />
-                }
-                
-                <span className={`text-sm font-medium ${isSelected ? 'font-bold text-red-700' : 'text-slate-800'}`}>{node.name || 'Unnamed Node'}</span>
-            </div>
-            {isOpen && hasChildren && (
-                <div className="border-l-2 border-slate-200 ml-3 pl-1">
-                    {node.children.map(child => (
-                        <TreeNode key={child.id} node={child} level={level + 1} onNodeSelect={onNodeSelect} selectedNode={selectedNode} />
-                    ))}
-                </div>
-            )}
+        <div className="absolute bottom-6 right-24 bg-white/80 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-200 shadow-sm z-10 font-black text-slate-500 text-[10px] uppercase tracking-widest flex items-center gap-2">
+            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+            Zoom: {Math.round(zoom * 100)}%
         </div>
     );
 };
 
-// Detail View Component
-const DetailView = ({ node }) => {
-    return (
-        <div className="space-y-4 animate-in fade-in duration-300">
-            <div>
-                <p className="text-sm font-bold text-slate-500">Product Name</p>
-                <h3 className="text-2xl font-bold text-slate-900">{node.name}</h3>
-            </div>
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                <div>
-                    <p className="text-sm font-bold text-slate-500">HS Code (cmdCode)</p>
-                    <p className="text-lg text-slate-800 font-mono">{node.id}</p>
-                </div>
-                <div>
-                    <p className="text-sm font-bold text-slate-500">Parent ID</p>
-                    <p className="text-lg text-slate-800 font-mono">{node.parentId}</p>
-                </div>
-                <div>
-                    <p className="text-sm font-bold text-slate-500">FOB Value (US$)</p>
-                    <p className="text-lg text-emerald-600 font-semibold">{node.fobValue?.toLocaleString('de-DE') || 'N/A'}</p>
-                </div>
-                 <div>
-                    <p className="text-sm font-bold text-slate-500">Unit Value (US$/ton)</p>
-                    <p className="text-lg text-indigo-600 font-semibold">{node.unitValue?.toLocaleString('de-DE') || 'N/A'}</p>
-                </div>
-            </div>
-            <details className="pt-4 border-t">
-                <summary className="text-sm font-bold text-slate-500 cursor-pointer">Raw Data</summary>
-                <pre className="text-xs bg-slate-100 p-4 rounded-lg mt-2 overflow-x-auto">
-                    {JSON.stringify(node, null, 2)}
-                </pre>
-            </details>
-        </div>
-    )
-}
+const PohonIndustriContent = () => { // Bungkus konten dalam provider
+    const navigate = useNavigate();
+    const [allData, setAllData] = useState([]);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [nodes, setNodes, onNodesChange] = useNodesState([]);
+    const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+    const [selectedPopUp, setSelectedPopUp] = useState(null);
+    const [user, setUser] = useState(null);
 
-const PohonIndustri = () => {
-    const [treeData, setTreeData] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [selectedNode, setSelectedNode] = useState(null);
+    useEffect(() => {
+        const userData = sessionStorage.getItem('user');
+        if (!userData) {
+            navigate('/login');
+        } else {
+            setUser(JSON.parse(userData));
+        }
+    }, [navigate]);
 
     useEffect(() => {
         const q = query(collection(db, "pohon_industri"));
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const dataList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            if (dataList.length > 0) {
-                const tree = buildTree(dataList);
-                setTreeData(tree);
-            } else {
-                setTreeData([]);
-            }
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching realtime data: ", error);
-            setLoading(false);
+        return onSnapshot(q, (snap) => {
+            const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setAllData(data);
         });
-        return () => unsubscribe();
     }, []);
 
+    const handleLogout = () => {
+        sessionStorage.removeItem('user');
+        navigate('/login');
+    };
+
+    const edgeType = 'smoothstep'; 
+    const edgeStyle = { stroke: '#ef4444', strokeWidth: 3 };
+
+    const onHideChildren = useCallback((id) => {
+        setEdges((eds) => {
+            const getDescendants = (parentId, collectedIds = []) => {
+                const targets = eds.filter(e => e.source === parentId).map(e => e.target);
+                targets.forEach(t => {
+                    collectedIds.push(t);
+                    getDescendants(t, collectedIds);
+                });
+                return collectedIds;
+            };
+            const idsToRemove = getDescendants(id);
+            setNodes(nds => nds.filter(n => !idsToRemove.includes(n.id)));
+            return eds.filter(e => !idsToRemove.includes(e.target));
+        });
+    }, [setNodes, setEdges]);
+
+    const onExpandChildren = useCallback((id) => {
+        setNodes((nds) => {
+            const parentNode = nds.find(n => n.id === id);
+            if (!parentNode) return nds;
+            const children = allData.filter(item => item.parentId === id);
+            const newNodes = [];
+            const newEdges = [];
+            children.forEach((child, index) => {
+                if (!nds.find(n => n.id === child.id)) {
+                    newNodes.push({
+                        id: child.id,
+                        type: 'industrial',
+                        data: { 
+                            id: child.id,
+                            label: child.name || child.label, 
+                            hsCode: child.id, 
+                            category: 'INTERMEDIATE PRODUCT', 
+                            onExpandChildren, onHideChildren, onExpandParent,
+                            onShowDetail: (d) => setSelectedPopUp(d),
+                            ...child 
+                        },
+                        position: { 
+                            x: parentNode.position.x + 450, 
+                            y: parentNode.position.y + (index * 200) - ((children.length - 1) * 100) 
+                        }
+                    });
+                    newEdges.push({
+                        id: `e-${id}-${child.id}`,
+                        source: id, target: child.id,
+                        animated: true, type: edgeType, style: edgeStyle
+                    });
+                }
+            });
+            if (newEdges.length > 0) setEdges(eds => [...eds, ...newEdges]);
+            return [...nds, ...newNodes];
+        });
+    }, [allData, onHideChildren]);
+
+    const onExpandParent = useCallback((id) => {
+        setNodes((nds) => {
+            const childNode = nds.find(n => n.id === id);
+            if (!childNode) return nds;
+            const item = allData.find(i => i.id === id);
+            if (!item?.parentId || item.parentId === 'ROOT') return nds;
+            const parent = allData.find(i => i.id === item.parentId);
+            if (parent && !nds.find(n => n.id === parent.id)) {
+                const newNode = {
+                    id: parent.id,
+                    type: 'industrial',
+                    data: { 
+                        id: parent.id,
+                        label: parent.name || parent.label, 
+                        hsCode: parent.id, 
+                        category: 'RAW MATERIAL', 
+                        onExpandChildren, onHideChildren, onExpandParent,
+                        onShowDetail: (d) => setSelectedPopUp(d),
+                        ...parent 
+                    },
+                    position: { x: childNode.position.x - 450, y: childNode.position.y }
+                };
+                setEdges(eds => [...eds, {
+                    id: `e-${parent.id}-${id}`,
+                    source: parent.id, target: id,
+                    animated: true, type: edgeType, style: edgeStyle
+                }]);
+                return [...nds, newNode];
+            }
+            return nds;
+        });
+    }, [allData, onExpandChildren, onHideChildren]);
+
+    const resetAndLoadRoot = (product) => {
+        setNodes([{
+            id: product.id,
+            type: 'industrial',
+            data: { 
+                id: product.id,
+                label: product.name || product.label, 
+                hsCode: product.id, 
+                category: 'RAW MATERIAL', 
+                onExpandChildren, onHideChildren, onExpandParent,
+                onShowDetail: (d) => setSelectedPopUp(d),
+                ...product 
+            },
+            position: { x: 0, y: 300 }
+        }]);
+        setEdges([]);
+        setSearchTerm("");
+    };
+
     return (
-        <div className="h-screen w-full flex bg-slate-50 font-sans">
-            <div className="w-1/3 bg-white p-6 border-r border-slate-200 overflow-y-auto">
-                <div className="flex justify-between items-center mb-6">
-                     <h1 className="text-xl font-black text-slate-800">Pohon Industri</h1>
-                     <Link to="/dashboard" className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800">
-                        <ArrowLeft size={16} />
-                        Dashboard
-                    </Link>
-                </div>
-                {loading ? (
-                    <p className="text-slate-500">Loading data from Firestore...</p>
-                ) : treeData.length > 0 ? (
-                    <div className="space-y-1">
-                        {treeData.map(node => (
-                            <TreeNode key={node.id} node={node} level={0} onNodeSelect={setSelectedNode} selectedNode={selectedNode} />
-                        ))}
+        <div className="flex h-screen bg-[#fcfdfe] font-sans overflow-hidden">
+            {/* SIDEBAR IDENTIK DASHBOARD.JS */}
+            <aside className="w-72 bg-white border-r border-slate-100 flex flex-col p-6 sticky top-0 h-screen z-50">
+                <div className="flex items-center gap-3 mb-10">
+                    <div className="bg-red-600 p-2.5 rounded-xl shadow-lg shadow-red-100">
+                        <LayoutDashboard className="text-white w-6 h-6" />
                     </div>
-                ) : (
-                    <p className="text-slate-500">No data found in 'pohon_industri' collection. Please upload a data file.</p>
-                )}
-            </div>
-            <div className="w-2/3 p-12 overflow-y-auto">
-                <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 sticky top-8">
-                    <h2 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-3">
-                        <FileText size={24} className="text-red-600"/>
-                        Detail Produk
-                    </h2>
-                    {selectedNode ? (
-                        <DetailView node={selectedNode} />
-                    ) : (
-                        <div className="text-center py-12">
-                            <p className="text-slate-500 font-semibold">Click on a node to see its details.</p>
+                    <div>
+                        <h1 className="text-lg font-black text-slate-900 uppercase leading-none">Intelligence</h1>
+                        <p className="text-[10px] font-bold text-red-600 uppercase tracking-widest">Portal Admin BRIN</p>
+                    </div>
+                </div>
+                
+                <nav className="flex-1 space-y-2 overflow-y-auto custom-scrollbar">
+                    <Link to="/dashboard" className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[11px] font-black uppercase text-slate-500 hover:bg-slate-50 transition-all">
+                        <LayoutDashboard size={18} /> Kembali ke Dashboard
+                    </Link>
+                    <div className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[11px] font-black uppercase bg-red-600 text-white shadow-lg shadow-red-100">
+                        <GitMerge size={18} /> Pohon Industri
+                    </div>
+
+                    <div className="pt-8 px-2 border-t border-slate-50 mt-4">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Database size={14} className="text-slate-400" />
+                            <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Navigasi Detail Produk</h2>
+                        </div>
+                        <div className="relative group">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-red-500 transition-colors" size={14} />
+                            <input 
+                                type="text" 
+                                placeholder="Cari HS / Nama..." 
+                                className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-[10px] font-bold outline-none focus:ring-2 focus:ring-red-100 focus:bg-white transition-all shadow-inner"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <div className="mt-4 space-y-1">
+                            {searchTerm && allData.filter(i => i.name?.toLowerCase().includes(searchTerm.toLowerCase()) || i.id.includes(searchTerm)).map(item => (
+                                <button key={item.id} onClick={() => resetAndLoadRoot(item)} className="w-full text-left p-3 rounded-xl hover:bg-red-50 group transition-all border border-transparent hover:border-red-100">
+                                    <p className="text-[10px] font-black text-slate-700 uppercase leading-none group-hover:text-red-700">{item.name}</p>
+                                    <p className="text-[8px] font-bold text-slate-400 mt-1 uppercase">HS {item.id}</p>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </nav>
+
+                <div className="mt-auto pt-6 border-t border-slate-50">
+                    <div onClick={() => navigate('/profile')} className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl mb-4 cursor-pointer hover:bg-slate-100 transition-colors">
+                        <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center text-white font-black text-sm uppercase">
+                            {(user?.nama || user?.email)?.charAt(0).toUpperCase() || 'U'}
+                        </div>
+                        <div>
+                            <p className="text-xs font-black text-slate-800 uppercase truncate max-w-[120px]">{user?.nama || 'User'}</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase">Lihat Profile</p>
+                        </div>
+                    </div>
+                    <button onClick={handleLogout} className="w-full flex items-center gap-3 p-3 text-slate-400 hover:text-red-600 font-bold text-xs uppercase transition-colors">
+                        <LogOut size={18} /> Logout Portal
+                    </button>
+                </div>
+            </aside>
+
+            {/* TOP BAR IDENTIK DASHBOARD.JS */}
+            <main className="flex-1 flex flex-col overflow-hidden relative">
+                <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-8 bg-white border-b border-slate-100 shadow-sm z-10">
+                    <div>
+                        <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase mb-1 leading-none tracking-tighter">Sistem Industri dan Manufaktur Berkelanjutan</h2>
+                        <p className="text-slate-400 text-sm font-medium uppercase tracking-widest mt-1">Update Data: 12 Jan 2026</p>
+                    </div>
+                    <div className="flex gap-4">
+                        <button className="bg-white border border-slate-200 p-2.5 rounded-xl text-slate-500 hover:bg-slate-50 shadow-sm transition-all"><Bell size={20} /></button>
+                        <button className="bg-white border border-slate-200 p-2.5 rounded-xl text-slate-500 hover:bg-slate-50 shadow-sm transition-all"><Settings size={20} /></button>
+                        <button className="bg-red-600 text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase flex items-center gap-2 shadow-lg shadow-red-100 hover:bg-red-700 transition-all"><Download size={16} /> Export Report</button>
+                    </div>
+                </header>
+
+                <div className="flex-1 bg-white relative overflow-hidden">
+                    <ReactFlow 
+                        nodes={nodes} edges={edges} 
+                        onNodesChange={onNodesChange} 
+                        nodeTypes={nodeTypes} 
+                        fitView
+                    >
+                        <Background color="#cbd5e1" gap={30} size={1} variant="dots" />
+                        <Controls className="bg-white shadow-2xl rounded-xl border-none ml-4 mb-4" />
+                        {/* INDIKATOR ZOOM */}
+                        <ZoomDisplay />
+                    </ReactFlow>
+
+                    {/* POP UP DETAIL */}
+                    {selectedPopUp && (
+                        <div className="absolute top-10 right-10 w-85 bg-white shadow-[0_25px_60px_rgba(0,0,0,0.15)] rounded-[2.5rem] p-8 border border-slate-50 z-[100] animate-in slide-in-from-right duration-500">
+                            <div className="flex justify-between items-start mb-6 border-b border-slate-50 pb-4">
+                                <div>
+                                    <p className="text-[9px] font-black text-red-600 uppercase tracking-[0.2em] mb-1">{selectedPopUp.category}</p>
+                                    <h3 className="text-xl font-black text-slate-900 uppercase leading-tight tracking-tight">{selectedPopUp.label}</h3>
+                                </div>
+                                <button onClick={() => setSelectedPopUp(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X size={20} className="text-slate-400" /></button>
+                            </div>
+                            <div className="space-y-4">
+                                <div className="p-6 bg-emerald-50 rounded-[2rem] border border-emerald-100">
+                                    <p className="text-[10px] font-black text-emerald-600 uppercase mb-2">Total Ekspor (USD)</p>
+                                    <div className="flex items-center gap-3 text-2xl font-black text-emerald-700">
+                                        <ArrowUp size={22} className="text-emerald-500" /> ${selectedPopUp.fobValue?.toLocaleString('de-DE') || '0'}
+                                    </div>
+                                </div>
+                                <div className="p-6 bg-indigo-50 rounded-[2rem] border border-indigo-100">
+                                    <p className="text-[10px] font-black text-indigo-600 uppercase mb-2">Unit Value / Ton</p>
+                                    <div className="flex items-center gap-3 text-2xl font-black text-indigo-700">
+                                        <span className="text-indigo-400 font-bold">$</span> {selectedPopUp.unitValue?.toLocaleString('de-DE') || '0'}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
-            </div>
+            </main>
         </div>
     );
 };
+
+// --- WRAPPER UTAMA AGAR PROVIDER BEKERJA ---
+const PohonIndustri = () => (
+    <ReactFlowProvider>
+        <PohonIndustriContent />
+    </ReactFlowProvider>
+);
 
 export default PohonIndustri;
