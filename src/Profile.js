@@ -19,10 +19,10 @@ const Profile = () => {
     }
 
     return (
-        <div className="min-h-screen bg-[#fcfdfe] flex items-center justify-center px-4">
+        <div className="min-h-screen bg-sky-50 flex items-center justify-center px-4">
             <div className="max-w-2xl w-full bg-white rounded-2xl shadow-xl p-8">
                 <div className="flex items-center space-x-6">
-                    <div className="w-24 h-24 rounded-full bg-red-600 flex items-center justify-center text-white text-4xl font-black">
+                    <div className="w-24 h-24 rounded-full bg-sky-600 flex items-center justify-center text-white text-4xl font-black">
                         {(user.nama || user.email).charAt(0).toUpperCase()}
                     </div>
                     <div>
@@ -45,7 +45,7 @@ const Profile = () => {
                 <div className="mt-8 border-t pt-6 text-center">
                     <button
                         onClick={() => navigate('/dashboard')}
-                        className="text-red-600 hover:text-red-800 font-medium"
+                        className="text-sky-600 hover:text-sky-800 font-medium"
                     >
                         Kembali ke Dashboard
                     </button>

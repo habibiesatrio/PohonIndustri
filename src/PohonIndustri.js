@@ -180,7 +180,7 @@ const PohonIndustriContent = () => {
                     <div className="pt-8 px-2 border-t border-slate-50 mt-4 font-sans">
                         <h2 className="text-[10px] font-black text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2"><Database size={14} className="text-slate-400"/> Navigasi Produk</h2>
                         <div className="relative group">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-red-500 transition-colors" size={14} />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-sky-500 transition-colors" size={14} />
                             <input 
                                 type="text" placeholder="Masukkan nama..." 
                                 className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-[10px] font-bold outline-none focus:ring-2 focus:ring-red-100 focus:bg-white transition-all shadow-inner"

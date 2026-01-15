@@ -44,7 +44,7 @@ const Daftar = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#fcfdfe] flex items-center justify-center px-4">
+        <div className="min-h-screen bg-sky-50 flex items-center justify-center px-4">
             <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
                 <h2 className="text-3xl font-bold text-slate-900 text-center mb-8">Buat Akun</h2>
                 <form onSubmit={handleDaftar} className="space-y-6">
@@ -54,7 +54,7 @@ const Daftar = () => {
                             type="text"
                             value={nama}
                             onChange={(e) => setNama(e.target.value)}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-transparent"
                             placeholder="Masukkan nama lengkap"
                             required
                         />
@@ -65,7 +65,7 @@ const Daftar = () => {
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-transparent"
                             placeholder="Masukkan email Anda"
                             required
                         />
@@ -76,7 +76,7 @@ const Daftar = () => {
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-transparent"
                             placeholder="Buat password Anda"
                             required
                         />
@@ -87,7 +87,7 @@ const Daftar = () => {
                             type="tel"
                             value={nomorHp}
                             onChange={(e) => setNomorHp(e.target.value)}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-transparent"
                             placeholder="Masukkan nomor HP Anda"
                         />
                     </div>
@@ -96,7 +96,7 @@ const Daftar = () => {
                         <textarea
                             value={bio}
                             onChange={(e) => setBio(e.target.value)}
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-transparent"
                             placeholder="Ceritakan sedikit tentang diri Anda"
                             rows="3"
                         ></textarea>
@@ -114,7 +114,7 @@ const Daftar = () => {
                         Sudah punya akun?{' '}
                         <button
                             onClick={() => navigate('/login')}
-                            className="text-red-600 hover:text-red-800 font-medium"
+                            className="text-sky-600 hover:text-sky-800 font-medium"
                         >
                             Masuk di sini
                         </button>

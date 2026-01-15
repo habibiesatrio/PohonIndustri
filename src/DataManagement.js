@@ -3,6 +3,7 @@ import { db } from './firebase';
 import { collection, getDocs, doc, writeBatch } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import PatentManagement from './PatentManagement'; // Import the new component
 
 const DataManagement = () => {
   const [data, setData] = useState([]);
@@ -10,6 +11,7 @@ const DataManagement = () => {
   const [file, setFile] = useState(null);
   const [notification, setNotification] = useState({ message: '', type: '' });
   const [user, setUser] = useState(null);
+  const [activeTab, setActiveTab] = useState('pohonIndustri'); // 'pohonIndustri' or 'paten'
 
   useEffect(() => {
     const loadData = async () => {
@@ -33,7 +35,6 @@ const DataManagement = () => {
         id: doc.id,
         ...doc.data()
       }));
-      console.log("Data from Firebase:", dataList);
       return dataList;
     } catch (error) {
       console.error("Error fetching data:", error.message);
@@ -52,12 +53,10 @@ const DataManagement = () => {
             const jsonText = event.target.result;
             try {
                 const parsedJson = JSON.parse(jsonText);
-                // Assuming the JSON is an array of objects
                 if (Array.isArray(parsedJson)) {
                     setPreviewData(parsedJson);
                     setNotification({ message: 'Preview ready. Please confirm to import.', type: 'info' });
                 } else {
-                    // Handle case where JSON is a single object
                     setPreviewData([parsedJson]);
                     setNotification({ message: 'Preview ready. Please confirm to import.', type: 'info' });
                 }
@@ -80,20 +79,16 @@ const DataManagement = () => {
           setNotification({ message: 'No data to import.', type: 'warning' });
           return;
       }
-      console.log("Starting import process...");
   
       const batch = writeBatch(db);
       previewData.forEach((row, index) => {
-          console.log(`Processing row ${index}:`, row);
           if (!row.cmdCode) {
-              console.warn(`Skipping row ${index} due to missing cmdCode.`);
               return;
           }
   
           const code = row.cmdCode.toString();
           let parentId = "ROOT";
   
-          // LOGIKA PEMETAAN OTOMATIS BERDASARKAN HS CODE
           if (code.startsWith("7219") || code.startsWith("7220")) {
           parentId = "7218";
           } else if (code.startsWith("7304") || code.startsWith("7306")) {
@@ -111,16 +106,13 @@ const DataManagement = () => {
               return isNaN(number) ? 0 : number;
           };
   
-          // Fallback for potentially malformed keys from different file origins
           const name = row['Product Name'] || row['Product\nName'];
           const fobValue = row['fobvalue (US$)'] || row['fobvalue\n(US$)'];
           const unitValue = row['Unit Value (US$/ton)'] || row['Unit\nValue (US$/ton)'];
   
-          console.log(`Extracted values for row ${index}:`, { name, fobValue, unitValue });
-  
           const docRef = doc(db, "pohon_industri", code);
           batch.set(docRef, {
-              ...row, // Preserve all original fields from the JSON row
+              ...row,
               name: name,
               fobValue: cleanAndParse(fobValue),
               unitValue: cleanAndParse(unitValue),
@@ -201,7 +193,7 @@ const DataManagement = () => {
     return (
       <div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold mb-4">Data Management</h1>
-        <p className="text-red-500">You must be logged in to manage data. Please log in first.</p>
+        <p className="text-sky-500">You must be logged in to manage data. Please log in first.</p>
       </div>
     );
   }
@@ -209,12 +201,37 @@ const DataManagement = () => {
   return (
     <div className="container mx-auto p-4">
         <div className="flex justify-between items-center mb-4">
-            <h1 className="text-2xl font-bold">Data Management for Pohon Industri</h1>
+            <h1 className="text-2xl font-bold">Data Management</h1>
             <Link to="/dashboard" className="flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2 px-4 rounded-lg transition-colors">
                 <ArrowLeft size={18} />
                 Back to Dashboard
             </Link>
         </div>
+
+      <div className="mb-6 border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+              <button
+                  onClick={() => setActiveTab('pohonIndustri')}
+                  className={`${
+                      activeTab === 'pohonIndustri'
+                          ? 'border-sky-500 text-sky-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+              >
+                  Pohon Industri
+              </button>
+              <button
+                  onClick={() => setActiveTab('paten')}
+                  className={`${
+                      activeTab === 'paten'
+                          ? 'border-sky-500 text-sky-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+              >
+                  Manajemen Paten
+              </button>
+          </nav>
+      </div>
 
       {notification.message && (
         <div className={`p-4 mb-4 text-sm rounded-lg ${ 
@@ -227,39 +244,45 @@ const DataManagement = () => {
         </div>
       )}
 
-      <div className="bg-white p-6 rounded-lg shadow mb-6">
-        <h2 className="text-xl font-bold mb-4">Import & Export</h2>
-        <p className="mb-4 text-sm text-gray-600">Upload a JSON file to update the 'pohon_industri' database. The file should be an array of objects.</p>
-        <div className="flex space-x-4 items-center">
-            <div>
-                <label htmlFor="file-upload" className="cursor-pointer bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                    Choose JSON File
-                </label>
-                <input id="file-upload" type="file" accept=".json" className="hidden" onChange={handleFileChange} />
+      {activeTab === 'pohonIndustri' && (
+          <>
+            <div className="bg-white p-6 rounded-lg shadow mb-6">
+                <h2 className="text-xl font-bold mb-4">Import & Export Pohon Industri</h2>
+                <p className="mb-4 text-sm text-gray-600">Upload a JSON file to update the 'pohon_industri' database. The file should be an array of objects.</p>
+                <div className="flex space-x-4 items-center">
+                    <div>
+                        <label htmlFor="file-upload" className="cursor-pointer bg-sky-500 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded">
+                            Choose JSON File
+                        </label>
+                        <input id="file-upload" type="file" accept=".json" className="hidden" onChange={handleFileChange} />
+                    </div>
+                    <button 
+                        onClick={handleImport} 
+                        className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded disabled:bg-purple-300 disabled:cursor-not-allowed"
+                        disabled={previewData.length === 0}
+                    >
+                        Upload Data
+                    </button>
+                    <button onClick={exportToJSON} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                        Export Data (JSON)
+                    </button>
+                </div>
+                {file && (
+                    <p className="text-sm text-gray-500 mt-4">Selected: {file.name}</p>
+                )}
             </div>
-            <button 
-                onClick={handleImport} 
-                className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded disabled:bg-purple-300 disabled:cursor-not-allowed"
-                disabled={previewData.length === 0}
-            >
-                Upload Data
-            </button>
-            <button onClick={exportToJSON} className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-                Export Data (JSON)
-            </button>
-        </div>
-        {file && (
-            <p className="text-sm text-gray-500 mt-4">Selected: {file.name}</p>
-        )}
-      </div>
-      
-      {previewData.length > 0 && (
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
-            {renderTable(previewData, "Data Preview")}
-        </div>
+            
+            {previewData.length > 0 && (
+                <div className="bg-white p-6 rounded-lg shadow mb-6">
+                    {renderTable(previewData, "Data Preview")}
+                </div>
+            )}
+
+            {renderTable(data, "Data from Firestore 'pohon_industri'")}
+        </>
       )}
 
-      {renderTable(data, "Data from Firestore 'pohon_industri'")}
+      {activeTab === 'paten' && <PatentManagement />}
 
     </div>
   );
