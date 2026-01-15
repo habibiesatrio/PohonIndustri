@@ -152,6 +152,42 @@ const AnalitikPaten = () => {
                     </ResponsiveContainer>
                 )}
             </div>
+
+            <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                <h3 className="text-xl font-bold text-slate-800 mb-6">Detail Data Paten</h3>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full leading-normal">
+                        <thead>
+                            <tr>
+                                <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama Produk</th>
+                                <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Publikasi</th>
+                                <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Jenis Produk</th>
+                                <th className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tahun</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {loading ? (
+                                <tr><td colSpan="4" className="text-center p-8 text-slate-500">Loading data...</td></tr>
+                            ) : filteredPatents.map(patent => (
+                                <tr key={patent.id}>
+                                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                                        <p className="text-gray-900 whitespace-no-wrap">{patent.namaProduk || 'N/A'}</p>
+                                    </td>
+                                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                                        <p className="text-gray-900 whitespace-no-wrap">{patent.publikasi || 'N/A'}</p>
+                                    </td>
+                                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                                        <p className="text-gray-900 whitespace-no-wrap">{patent.jenisProduk || 'N/A'}</p>
+                                    </td>
+                                    <td className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                                        <p className="text-gray-900 whitespace-no-wrap">{patent.createdAt instanceof Date ? patent.createdAt.getFullYear() : 'N/A'}</p>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
             
             <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100" style={{ height: 600 }}>
                 <h3 className="text-xl font-bold text-slate-800 mb-6">Peta Jalan Paten</h3>
