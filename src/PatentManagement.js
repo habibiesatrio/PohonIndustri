@@ -2,21 +2,41 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { db } from './firebase';
 import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
 
-// Simple CSV to JSON converter
+// More robust CSV to JSON converter
 const csvToJson = (csv) => {
+    console.log("Starting CSV to JSON conversion");
     const lines = csv.split('\n');
+    if (lines.length === 0) {
+        console.error("CSV is empty or invalid.");
+        return [];
+    }
     const result = [];
-    const headers = lines[0].split(',').map(header => header.trim());
+    // Trim and remove quotes from headers
+    const headers = lines[0].split(',').map(header => header.trim().replace(/"/g, ''));
+    console.log("CSV Headers:", headers);
+
     for (let i = 1; i < lines.length; i++) {
+        if (lines[i].trim() === '') continue; // Skip empty lines
+
         const obj = {};
-        const currentline = lines[i].split(',');
+        // This regex handles quoted fields with commas
+        const currentline = lines[i].match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || [];
+        
         if (currentline.length === headers.length) {
             for (let j = 0; j < headers.length; j++) {
-                obj[headers[j]] = currentline[j].trim();
+                let val = currentline[j].trim();
+                // Remove quotes if they are at the beginning and end
+                if (val.startsWith('"') && val.endsWith('"')) {
+                    val = val.substring(1, val.length - 1);
+                }
+                obj[headers[j]] = val;
             }
             result.push(obj);
+        } else {
+            console.warn(`Skipping line ${i + 1} due to mismatched column count. Expected ${headers.length}, got ${currentline.length}. Line content: ${lines[i]}`);
         }
     }
+    console.log("CSV parsing result:", result);
     return result;
 };
 
@@ -31,12 +51,14 @@ const PatentManagement = () => {
 
     const fetchData = useCallback(async () => {
         try {
+          console.log("Fetching patents data from Firestore...");
           const querySnapshot = await getDocs(collection(db, "patents"));
           const dataList = querySnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
           }));
           setData(dataList);
+          console.log("Patents data fetched:", dataList);
         } catch (error) {
           console.error("Error fetching data:", error.message);
           setNotification({ message: `Error fetching data from Firestore: ${error.message}`, type: 'error' });
@@ -50,23 +72,29 @@ const PatentManagement = () => {
     const handleFileChange = (e) => {
         const selectedFile = e.target.files[0];
         if (selectedFile) {
+            console.log("File selected:", selectedFile.name);
             setFile(selectedFile);
             setNotification({ message: 'File selected. Reading file...', type: 'info' });
 
             const reader = new FileReader();
             reader.onload = async (event) => {
                 const content = event.target.result;
+                console.log("File content loaded.");
                 try {
                     let parsedData;
                     if (selectedFile.name.endsWith('.json')) {
+                        console.log("Parsing JSON file...");
                         parsedData = JSON.parse(content);
                     } else if (selectedFile.name.endsWith('.csv')) {
+                        console.log("Parsing CSV file...");
                         parsedData = csvToJson(content);
                     } else {
                         setNotification({ message: 'Unsupported file type. Please upload a CSV or JSON file.', type: 'error' });
                         return;
                     }
                     
+                    console.log("Parsed data:", parsedData);
+
                     if (Array.isArray(parsedData)) {
                         setPreviewData(parsedData);
                         setNotification({ message: 'Preview ready. Please confirm to import.', type: 'info' });
@@ -93,20 +121,23 @@ const PatentManagement = () => {
             setNotification({ message: 'No data to import.', type: 'warning' });
             return;
         }
+        console.log("Starting patent data import...");
 
         const batch = writeBatch(db);
-        previewData.forEach((row) => {
+        previewData.forEach((row, index) => {
+            console.log(`Processing row ${index} for import:`, row);
             const docRef = doc(collection(db, "patents")); // Auto-generates ID
             batch.set(docRef, {
                 ...row,
-                jenisProduk: jenisProduk || row.jenisProduk,
-                jumlahPaten: jumlahPaten || row.jumlahPaten,
+                jenisProduk: jenisProduk || row.jenisProduk || 'N/A',
+                jumlahPaten: jumlahPaten || row.jumlahPaten || 'N/A',
                 createdAt: new Date()
             });
         });
 
         try {
             await batch.commit();
+            console.log("Batch commit successful.");
             setNotification({ message: 'Patent database updated successfully!', type: 'success' });
             alert('Patent database updated successfully!');
             setFile(null);
