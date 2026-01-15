@@ -5,6 +5,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import ReactFlow, { Background, Controls } from 'reactflow';
 import 'reactflow/dist/style.css';
 
+console.log("AnalitikPaten.js module loaded");
+
 const initialNodes = [
     { id: '1', position: { x: 0, y: 150 }, data: { label: 'Perguruan Tinggi (R&D)' }, type: 'input' },
     { id: '2', position: { x: 250, y: 0 }, data: { label: 'BRIN (Validasi & Lisensi)' } },
@@ -22,18 +24,20 @@ const initialEdges = [
 ];
 
 const AnalitikPaten = () => {
+    console.log("AnalitikPaten component rendering...");
     const [patentsData, setPatentsData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('Semua');
 
     useEffect(() => {
+        console.log("AnalitikPaten: useEffect for fetching data triggered.");
         const fetchPatents = async () => {
             setLoading(true);
             try {
+                console.log("Fetching patents from Firestore...");
                 const querySnapshot = await getDocs(collection(db, "patents"));
                 const dataList = querySnapshot.docs.map(doc => {
                     const data = doc.data();
-                    // Convert Firestore timestamp to JavaScript Date object
                     if (data.createdAt && data.createdAt.toDate) {
                         data.createdAt = data.createdAt.toDate();
                     }
@@ -42,11 +46,13 @@ const AnalitikPaten = () => {
                         ...data
                     };
                 });
+                console.log("Fetched patents data:", dataList);
                 setPatentsData(dataList);
             } catch (error) {
                 console.error("Error fetching patents data:", error);
             } finally {
                 setLoading(false);
+                console.log("Finished fetching patents data, loading set to false.");
             }
         };
 
@@ -54,25 +60,33 @@ const AnalitikPaten = () => {
     }, []);
 
     const filteredPatents = useMemo(() => {
+        console.log("Calculating filteredPatents. Current filter:", filter);
         if (filter === 'Semua') {
             return patentsData;
         }
-        return patentsData.filter(p => p.jenisProduk === filter);
+        const result = patentsData.filter(p => p.jenisProduk === filter);
+        console.log("Filtered patents result:", result);
+        return result;
     }, [patentsData, filter]);
 
     const chartData = useMemo(() => {
+        console.log("Calculating chartData.");
         const patentsByYear = filteredPatents.reduce((acc, patent) => {
             if (patent.createdAt instanceof Date) {
                 const year = patent.createdAt.getFullYear();
                 acc[year] = (acc[year] || 0) + 1;
+            } else {
+                console.warn("Patent object does not have a valid 'createdAt' Date field:", patent);
             }
             return acc;
         }, {});
 
-        return Object.keys(patentsByYear).map(year => ({
+        const result = Object.keys(patentsByYear).map(year => ({
             year: year,
             jumlah: patentsByYear[year],
         })).sort((a, b) => a.year - b.year);
+        console.log("Chart data result:", result);
+        return result;
     }, [filteredPatents]);
 
     const renderExplanation = () => {
@@ -92,6 +106,7 @@ const AnalitikPaten = () => {
         return <p className="text-gray-600 text-sm">{explanation}</p>;
     };
 
+    console.log("AnalitikPaten: rendering return statement.");
     return (
         <div className="animate-in fade-in duration-500 space-y-8">
             <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">

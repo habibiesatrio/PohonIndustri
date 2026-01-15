@@ -54,6 +54,8 @@ const MetricCard = ({ label, val, sub, icon }) => (
 );
 
 
+import AnalitikPaten from './AnalitikPaten';
+
 const Dashboard = () => {
     const [user, setUser] = useState(null);
     const [activeDashTab, setActiveDashTab] = useState('hilirisasi');
@@ -73,7 +75,7 @@ const Dashboard = () => {
     }, [navigate]);
 
     useEffect(() => {
-        if (user) { // Only fetch data if the user is authenticated
+        if (user && activeDashTab === 'hilirisasi') { // Only fetch data if the user is authenticated and on the correct tab
             const fetchData = async () => {
                 setLoading(true);
                 try {
@@ -97,7 +99,7 @@ const Dashboard = () => {
 
             fetchData();
         }
-    }, [user]);
+    }, [user, activeDashTab]);
 
     const handleLogout = () => {
         sessionStorage.removeItem('user');
@@ -190,7 +192,7 @@ const Dashboard = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
-                                        {loading ? (
+                                        {loading && activeDashTab === 'hilirisasi' ? (
                                             <tr><td colSpan="7" className="text-center p-8 text-slate-500">Loading data...</td></tr>
                                         ) : filteredData.map(item => (
                                             <tr key={item.id} className="hover:bg-slate-50">
@@ -214,7 +216,7 @@ const Dashboard = () => {
                         </div>
                     </div>
                 )}
-                {activeDashTab === 'paten' && <div className="bg-white p-8 rounded-2xl"><h2 className="font-bold text-xl">Analitik Paten</h2><p>Content for this tab goes here.</p></div>}
+                {activeDashTab === 'paten' && <AnalitikPaten />}
                 {activeDashTab === 'sektoral' && <div className="bg-white p-8 rounded-2xl"><h2 className="font-bold text-xl">Data Sektoral</h2><p>Content for this tab goes here.</p></div>}
 
             </main>
