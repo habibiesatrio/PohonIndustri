@@ -23,6 +23,8 @@ const initialEdges = [
     { id: 'e5-4', source: '5', target: '4', animated: true, label: 'Produk Impor/Lisensi' },
 ];
 
+const COLORS = ["#0ea5e9", "#6366f1", "#10b981", "#f97316", "#ef4444"];
+
 const AnalitikPaten = () => {
     console.log("AnalitikPaten component rendering...");
     const [patentsData, setPatentsData] = useState([]);
@@ -69,24 +71,27 @@ const AnalitikPaten = () => {
         return result;
     }, [patentsData, filter]);
 
-    const chartData = useMemo(() => {
+    const { chartData, productTypes } = useMemo(() => {
         console.log("Calculating chartData.");
-        const patentsByYear = filteredPatents.reduce((acc, patent) => {
+        const patentsByYearAndType = filteredPatents.reduce((acc, patent) => {
             if (patent.createdAt instanceof Date) {
                 const year = patent.createdAt.getFullYear();
-                acc[year] = (acc[year] || 0) + 1;
-            } else {
-                console.warn("Patent object does not have a valid 'createdAt' Date field:", patent);
+                const type = patent.jenisProduk || 'Lainnya';
+                if (!acc[year]) {
+                    acc[year] = { year };
+                }
+                acc[year][type] = (acc[year][type] || 0) + 1;
             }
             return acc;
         }, {});
 
-        const result = Object.keys(patentsByYear).map(year => ({
-            year: year,
-            jumlah: patentsByYear[year],
-        })).sort((a, b) => a.year - b.year);
+        const allProductTypes = [...new Set(filteredPatents.map(p => p.jenisProduk || 'Lainnya'))];
+
+        const result = Object.values(patentsByYearAndType).sort((a, b) => a.year - b.year);
+        
         console.log("Chart data result:", result);
-        return result;
+        console.log("Product types:", allProductTypes);
+        return { chartData: result, productTypes: allProductTypes };
     }, [filteredPatents]);
 
     const renderExplanation = () => {
@@ -100,7 +105,7 @@ const AnalitikPaten = () => {
         const explanation = `
             Menampilkan data untuk filter "${filter}". 
             Total paten yang ditemukan adalah ${totalPatents}. 
-            Grafik menunjukkan tren pendaftaran paten per tahun. 
+            Grafik menunjukkan tren pendaftaran paten per tahun, dikelompokkan berdasarkan jenis produk.
             Peta jalan di bawah ini mengilustrasikan alur umum dari riset hingga komersialisasi produk.
         `;
         return <p className="text-gray-600 text-sm">{explanation}</p>;
@@ -131,7 +136,7 @@ const AnalitikPaten = () => {
             </div>
 
             <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
-                <h3 className="text-xl font-bold text-slate-800 mb-6">Perkembangan Paten</h3>
+                <h3 className="text-xl font-bold text-slate-800 mb-6">Perkembangan Paten berdasarkan Jenis Produk</h3>
                 {loading ? <p>Loading chart...</p> : (
                     <ResponsiveContainer width="100%" height={300}>
                         <BarChart data={chartData}>
@@ -140,7 +145,9 @@ const AnalitikPaten = () => {
                             <YAxis />
                             <Tooltip />
                             <Legend />
-                            <Bar dataKey="jumlah" fill="#0ea5e9" />
+                            {productTypes.map((type, index) => (
+                                <Bar key={type} dataKey={type} stackId="a" fill={COLORS[index % COLORS.length]} />
+                            ))}
                         </BarChart>
                     </ResponsiveContainer>
                 )}
