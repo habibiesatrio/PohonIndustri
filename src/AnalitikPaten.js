@@ -30,10 +30,10 @@ const COLORS = {
     lainnya: "#ef4444"
 };
 
+// Use simplified keys without newlines
 const KEY_MAP = {
     "Perguruan Tinggi Dalam Negeri (Data DJKI)": "pt",
-    "BRIN 
-(Data DJKI)": "brin",
+    "BRIN (Data DJKI)": "brin",
     "Industry Dalam Negeri (Data DJKI)": "idn",
     "Industry Luar Negeri (Data DJKI)": "iln",
     "Lainnya": "lainnya"
@@ -48,6 +48,9 @@ const DISPLAY_NAMES = {
 };
 
 const SAFE_KEYS = Object.values(KEY_MAP);
+
+// Normalization function to handle whitespace and newlines
+const normalizeKey = (key) => key.replace(/\s*\n\s*/g, ' ').replace(/\s+/g, ' ');
 
 const DetailModal = ({ product, onClose }) => {
     if (!product) return null;
@@ -95,10 +98,13 @@ const AnalitikPaten = () => {
                 const dataList = querySnapshot.docs.map(doc => {
                     const rawData = doc.data();
                     const sanitizedData = { id: doc.id };
+                    
                     for (const rawKey in rawData) {
-                        const cleanKey = Object.keys(KEY_MAP).find(k => k.replace(/\s*\n\s*/g, ' ') === rawKey.replace(/\s*\n\s*/g, ' '));
-                        if(cleanKey) {
-                            sanitizedData[KEY_MAP[cleanKey]] = Number(rawData[rawKey]) || 0;
+                        const normalizedRawKey = normalizeKey(rawKey);
+                        const matchedKey = Object.keys(KEY_MAP).find(k => normalizeKey(k) === normalizedRawKey);
+
+                        if (matchedKey) {
+                            sanitizedData[KEY_MAP[matchedKey]] = Number(rawData[rawKey]) || 0;
                         } else {
                             sanitizedData[rawKey] = rawData[rawKey];
                         }
