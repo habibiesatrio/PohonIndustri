@@ -12,20 +12,20 @@ const IndustrialNode = ({ data }) => {
     <div className={`
       bg-white border-2 border-slate-100 shadow-xl rounded-2xl overflow-visible 
       min-w-[240px] relative transition-all duration-300 ease-in-out
-      hover:border-red-500 hover:ring-4 hover:ring-red-500/10 hover:z-50 group
+      hover:border-sky-500 hover:ring-4 hover:ring-sky-500/10 hover:z-50 group
     `}>
       
       {/* Tombol Expand Kiri */}
       <div className="absolute left-[-22px] top-1/2 -translate-y-1/2 z-[60] opacity-0 group-hover:opacity-100 transition-opacity">
           <button 
             onClick={(e) => { e.stopPropagation(); data.onExpandParent(data.id); }}
-            className="bg-white border border-slate-200 shadow-lg rounded-full p-2 hover:bg-red-50 text-red-600 transition-all hover:scale-110"
+            className="bg-white border border-slate-200 shadow-lg rounded-full p-2 hover:bg-sky-50 text-sky-600 transition-all hover:scale-110"
           >
             <Plus size={14} strokeWidth={4} />
           </button>
       </div>
 
-      <Handle type="target" position={Position.Left} className="w-2 h-2 bg-red-500 border-none opacity-0" />
+      <Handle type="target" position={Position.Left} className="w-2 h-2 bg-sky-500 border-none opacity-0" />
       
       {/* Header Kotak */}
       <div className={`text-[9px] font-black px-4 py-2 uppercase tracking-widest text-white ${headerColor} rounded-t-xl`}>
@@ -41,7 +41,7 @@ const IndustrialNode = ({ data }) => {
         </p>
       </div>
 
-      <Handle type="source" position={Position.Right} className="w-2 h-2 bg-red-500 border-none opacity-0" />
+      <Handle type="source" position={Position.Right} className="w-2 h-2 bg-sky-500 border-none opacity-0" />
 
       {/* Tombol Expand/Hide Kanan */}
       <div className="absolute right-[-22px] top-1/2 -translate-y-1/2 flex flex-col gap-2 z-[60] opacity-0 group-hover:opacity-100 transition-opacity">

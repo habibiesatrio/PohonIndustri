@@ -76,7 +76,7 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#fcfdfe] flex items-center justify-center px-4">
+        <div className="min-h-screen bg-sky-50 flex items-center justify-center px-4">
             <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
                 {!showForgotPassword ? (
                     <>
@@ -88,7 +88,7 @@ const Login = () => {
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-transparent"
                                     placeholder="Masukkan email Anda"
                                     required
                                 />
@@ -99,7 +99,7 @@ const Login = () => {
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                    className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-transparent"
                                     placeholder="Masukkan password Anda"
                                     required
                                 />
@@ -117,7 +117,7 @@ const Login = () => {
                                 Belum punya akun?{' '}
                                 <button
                                     onClick={() => navigate('/daftar')}
-                                    className="text-red-600 hover:text-red-800 font-medium"
+                                    className="text-sky-600 hover:text-sky-800 font-medium"
                                 >
                                     Daftar di sini
                                 </button>
@@ -126,7 +126,7 @@ const Login = () => {
                         <div className="mt-6 text-center">
                             <button
                                 onClick={() => setShowForgotPassword(true)}
-                                className="text-red-600 hover:text-red-800 text-sm font-medium"
+                                className="text-sky-600 hover:text-sky-800 text-sm font-medium"
                             >
                                 Lupa Password?
                             </button>
@@ -151,7 +151,7 @@ const Login = () => {
                                         type="email"
                                         value={forgotEmail}
                                         onChange={(e) => setForgotEmail(e.target.value)}
-                                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-transparent"
                                         placeholder="Masukkan email Anda"
                                         required
                                     />
@@ -163,7 +163,7 @@ const Login = () => {
                                         type="text"
                                         value={otp}
                                         onChange={(e) => setOtp(e.target.value)}
-                                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                        className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:border-transparent"
                                         placeholder="Masukkan kode OTP"
                                         required
                                     />
@@ -173,7 +173,7 @@ const Login = () => {
                             {message && <p className="text-red-500 text-sm">{message}</p>}
                             <button
                                 type="submit"
-                                className="w-full bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition-all"
+                                className="w-full bg-sky-600 text-white py-3 rounded-xl font-bold hover:bg-sky-700 transition-all"
                             >
                                 {step === 1 ? 'Kirim OTP' : 'Konfirmasi'}
                             </button>
