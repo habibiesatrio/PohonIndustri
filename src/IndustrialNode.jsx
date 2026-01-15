@@ -106,4 +106,5 @@ const IndustrialNode = ({ data }) => {
   );
 };
 
+
 export default memo(IndustrialNode);
