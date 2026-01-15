@@ -1,17 +1,17 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { db } from './firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import ReactFlow, { Background, Controls, useNodesState, useEdgesState } from 'reactflow';
-import { FileText } from 'lucide-react';
+import { FileText, XCircle } from 'lucide-react';
 import 'reactflow/dist/style.css';
 
 const initialNodesData = [
-    { id: '1', position: { x: 0, y: 150 }, data: { label: 'Perguruan Tinggi (R&D)' }, type: 'input' },
-    { id: '2', position: { x: 250, y: 0 }, data: { label: 'BRIN (Validasi & Lisensi)' } },
-    { id: '3', position: { x: 250, y: 300 }, data: { label: 'Industri Dalam Negeri' } },
+    { id: '1', position: { x: 0, y: 150 }, data: { label: 'Perguruan Tinggi (R&D)', type: 'Perguruan Tinggi Dalam Negeri (Data DJKI)' }, type: 'input' },
+    { id: '2', position: { x: 250, y: 0 }, data: { label: 'BRIN (Validasi & Lisensi)', type: 'BRIN (Data DJKI)' } },
+    { id: '3', position: { x: 250, y: 300 }, data: { label: 'Industri Dalam Negeri', type: 'Industry Dalam Negeri (Data DJKI)' } },
     { id: '4', position: { x: 500, y: 150 }, data: { label: 'Produk Komersial' }, type: 'output' },
-    { id: '5', position: { x: 250, y: 450 }, data: { label: 'Industri Luar Negeri' } },
+    { id: '5', position: { x: 250, y: 450 }, data: { label: 'Industri Luar Negeri', type: 'Industry Luar Negeri (Data DJKI)' } },
 ];
 
 const initialEdges = [
@@ -24,10 +24,21 @@ const initialEdges = [
 
 const COLORS = ["#0ea5e9", "#6366f1", "#10b981", "#f97316", "#ef4444", "#8b5cf6"];
 
+const PatentCard = ({ patent }) => (
+    <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-all ease-in-out">
+        <p className="text-xs font-bold text-sky-600 uppercase mb-1">{patent.jenisProduk || 'N/A'}</p>
+        <h4 className="font-bold text-slate-800 mb-2">{patent.namaProduk || 'Nama Produk Tidak Tersedia'}</h4>
+        <p className="text-xs text-slate-500 mb-3">Publikasi: <span className="font-semibold">{patent.publikasi || 'N/A'}</span></p>
+        <p className="text-xs font-mono bg-slate-50 rounded p-1 text-center">Tahun: {patent.createdAt instanceof Date ? patent.createdAt.getFullYear() : 'N/A'}</p>
+    </div>
+);
+
+
 const AnalitikPaten = () => {
     const [patentsData, setPatentsData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('Semua');
+    const [drilldownFilter, setDrilldownFilter] = useState(null); // { key, value }
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodesData);
     const [edges] = useEdgesState(initialEdges);
 
@@ -53,13 +64,44 @@ const AnalitikPaten = () => {
         fetchPatents();
     }, []);
 
-    const filteredPatents = useMemo(() => {
-        if (filter === 'Semua') return patentsData;
-        return patentsData.filter(p => p.jenisProduk === filter);
-    }, [patentsData, filter]);
+    const handleChartClick = (data) => {
+        if (data && data.activePayload) {
+            const payload = data.activePayload[0].payload;
+            const year = payload.year;
+            const productType = data.activeLabel;
+            setDrilldownFilter({ year, jenisProduk: productType });
+        }
+    };
+    
+    const onNodeClick = useCallback((event, node) => {
+        const productType = node.data.type;
+        if (productType && productType !== 'output') {
+             setDrilldownFilter({ jenisProduk: productType });
+        }
+    }, []);
+
+    const clearDrilldown = () => setDrilldownFilter(null);
+
+    const patentsForDisplay = useMemo(() => {
+        let data = (filter === 'Semua') ? patentsData : patentsData.filter(p => p.jenisProduk === filter);
+        if (drilldownFilter) {
+            data = data.filter(p => {
+                let matches = true;
+                if (drilldownFilter.year) {
+                    matches = matches && p.createdAt instanceof Date && p.createdAt.getFullYear() === drilldownFilter.year;
+                }
+                if (drilldownFilter.jenisProduk) {
+                    matches = matches && p.jenisProduk === drilldownFilter.jenisProduk;
+                }
+                return matches;
+            });
+        }
+        return data;
+    }, [patentsData, filter, drilldownFilter]);
 
     const { chartData, productTypes } = useMemo(() => {
-        const patentsByYearAndType = filteredPatents.reduce((acc, patent) => {
+        const dataToProcess = (filter === 'Semua') ? patentsData : patentsData.filter(p => p.jenisProduk === filter);
+        const patentsByYearAndType = dataToProcess.reduce((acc, patent) => {
             if (patent.createdAt instanceof Date) {
                 const year = patent.createdAt.getFullYear();
                 const type = patent.jenisProduk || 'Lainnya';
@@ -68,10 +110,10 @@ const AnalitikPaten = () => {
             }
             return acc;
         }, {});
-        const allProductTypes = [...new Set(filteredPatents.map(p => p.jenisProduk || 'Lainnya'))];
+        const allProductTypes = [...new Set(dataToProcess.map(p => p.jenisProduk || 'Lainnya'))];
         const result = Object.values(patentsByYearAndType).sort((a, b) => a.year - b.year);
         return { chartData: result, productTypes: allProductTypes };
-    }, [filteredPatents]);
+    }, [patentsData, filter]);
 
     useEffect(() => {
         const counts = patentsData.reduce((acc, p) => {
@@ -99,11 +141,19 @@ const AnalitikPaten = () => {
 
 
     const renderExplanation = () => {
-        if (loading) return <p>Memuat narasi...</p>;
-        const totalPatents = filteredPatents.length;
-        const explanation = totalPatents > 0
-            ? `Menampilkan data untuk filter "${filter}". Total paten yang ditemukan adalah ${totalPatents}. Grafik menunjukkan tren pendaftaran paten per tahun, dikelompokkan berdasarkan jenis produk.`
-            : `Tidak ada data paten untuk filter "${filter}".`;
+        const totalPatents = patentsForDisplay.length;
+        let explanation = `Menampilkan ${totalPatents} paten. `;
+
+        if(drilldownFilter) {
+            const year = drilldownFilter.year;
+            const type = drilldownFilter.jenisProduk;
+            explanation = `Drilldown aktif: ${totalPatents} paten ditemukan untuk ${type ? `tipe "${type}"` : ''} ${year ? `di tahun ${year}`: ''}. Klik tombol 'Clear' untuk kembali.`
+        } else if (filter !== 'Semua') {
+            explanation += `Data difilter berdasarkan jenis produk: "${filter}".`
+        } else {
+            explanation += 'Semua data paten ditampilkan.'
+        }
+
 
         return (
             <div className="bg-sky-50 border-l-4 border-sky-500 text-sky-800 p-4 rounded-r-lg" role="alert">
@@ -125,7 +175,7 @@ const AnalitikPaten = () => {
                     <h3 className="text-xl font-bold text-slate-800">Filter Analitik</h3>
                     <select
                         value={filter}
-                        onChange={(e) => setFilter(e.target.value)}
+                        onChange={(e) => { setFilter(e.target.value); clearDrilldown(); }}
                         className="px-4 py-2 text-xs font-bold rounded-lg bg-slate-100 text-slate-600 focus:ring-2 focus:ring-sky-500"
                     >
                         <option value="Semua">Semua Jenis Produk</option>
@@ -140,10 +190,10 @@ const AnalitikPaten = () => {
             </div>
 
             <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
-                <h3 className="text-xl font-bold text-slate-800 mb-6">Perkembangan Paten berdasarkan Jenis Produk</h3>
+                <h3 className="text-xl font-bold text-slate-800 mb-6">Perkembangan Paten (Klik bar untuk detail)</h3>
                 {loading ? <p>Memuat chart...</p> : (
                     <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={chartData}>
+                        <BarChart data={chartData} onClick={handleChartClick}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="year" />
                             <YAxis />
@@ -158,52 +208,30 @@ const AnalitikPaten = () => {
             </div>
 
             <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
-                <h3 className="text-xl font-bold text-slate-800 mb-6">Rekapitulasi Data Paten</h3>
-                <div className="overflow-x-auto">
-                    <table className="min-w-full leading-normal">
-                        <thead>
-                            <tr className="border-b-2 border-gray-200 bg-gray-50">
-                                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama Produk</th>
-                                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Publikasi</th>
-                                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Jenis Produk</th>
-                                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tahun</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white">
-                            {loading ? (
-                                <tr><td colSpan="4" className="text-center p-8 text-slate-500">Memuat data...</td></tr>
-                            ) : filteredPatents.length > 0 ? filteredPatents.map(patent => (
-                                <tr key={patent.id} className="hover:bg-slate-50">
-                                    <td className="px-5 py-4 border-b border-gray-200 text-sm">
-                                        <p className="text-gray-900 whitespace-no-wrap font-medium">{patent.namaProduk || '-'}</p>
-                                    </td>
-                                    <td className="px-5 py-4 border-b border-gray-200 text-sm">
-                                        <p className="text-gray-900 whitespace-no-wrap">{patent.publikasi || '-'}</p>
-                                    </td>
-                                    <td className="px-5 py-4 border-b border-gray-200 text-sm">
-                                         <span className={`relative inline-block px-3 py-1 font-semibold text-green-900 leading-tight`}>
-                                            <span aria-hidden className={`absolute inset-0 bg-green-200 opacity-50 rounded-full`}></span>
-                                            <span className="relative">{patent.jenisProduk || '-'}</span>
-                                        </span>
-                                    </td>
-                                    <td className="px-5 py-4 border-b border-gray-200 text-sm">
-                                        <p className="text-gray-900 whitespace-no-wrap">{patent.createdAt instanceof Date ? patent.createdAt.getFullYear() : '-'}</p>
-                                    </td>
-                                </tr>
-                            )) : (
-                                <tr><td colSpan="4" className="text-center p-8 text-slate-500">Tidak ada data.</td></tr>
-                            )}
-                        </tbody>
-                    </table>
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-slate-800">Detail Data Paten</h3>
+                    {drilldownFilter && (
+                        <button onClick={clearDrilldown} className="flex items-center gap-2 text-xs font-bold bg-sky-100 text-sky-700 px-3 py-1 rounded-full hover:bg-sky-200 transition-colors">
+                            <XCircle size={14} /> Clear Drilldown
+                        </button>
+                    )}
                 </div>
+                {loading ? <p>Memuat data...</p> : patentsForDisplay.length > 0 ? (
+                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {patentsForDisplay.map(patent => <PatentCard key={patent.id} patent={patent} />)}
+                    </div>
+                ) : (
+                    <p className="text-center p-8 text-slate-500">Tidak ada data untuk ditampilkan.</p>
+                )}
             </div>
             
             <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100" style={{ height: 600 }}>
-                <h3 className="text-xl font-bold text-slate-800 mb-6">Peta Jalan Paten (Dinamis)</h3>
+                <h3 className="text-xl font-bold text-slate-800 mb-6">Peta Jalan Paten (Klik node untuk filter)</h3>
                 <ReactFlow
                     nodes={nodes}
                     edges={edges}
                     onNodesChange={onNodesChange}
+                    onNodeClick={onNodeClick}
                     fitView
                 >
                     <Background />
