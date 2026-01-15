@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db } from './firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { rtdb } from './firebase';
+import { ref, onValue } from 'firebase/database';
 import {
     Database,
     Layers,
@@ -74,31 +74,42 @@ const Dashboard = () => {
     }, [navigate]);
 
     useEffect(() => {
-        if (user && activeDashTab === 'hilirisasi') { // Only fetch data if the user is authenticated and on the correct tab
-            const fetchData = async () => {
-                setLoading(true);
-                try {
-                    const querySnapshot = await getDocs(collection(db, "pohon_industri"));
-                    const dataList = querySnapshot.docs.map(doc => {
-                        const data = doc.data();
-                        const techData = mockTechData[data.cmdCode] || mockTechData.default;
+        if (user && activeDashTab === 'hilirisasi') {
+            setLoading(true);
+            const dbRef = ref(rtdb, '/');
+            const unsubscribe = onValue(dbRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    const formatted = (Array.isArray(data)
+                        ? data.filter(i => i !== null)
+                        : Object.values(data))
+                        .filter(Boolean);
+
+                    const dataList = formatted.map(item => {
+                        const techData = mockTechData[item.Harmony_ID] || mockTechData.default;
+                        const downstreamExport = Number(item.Downstream_Export) || 0;
+                        const downstreamImport = Number(item.Downstream_Import) || 0;
                         return {
-                            id: doc.id,
-                            ...data,
+                            id: item.Harmony_ID,
+                            name: item.Product_Name,
+                            ...item,
                             ...techData,
                             trl: Number(techData.trl) || 0,
-                            unitValue: Number(data.unitValue) || 0,
+                            unitValue: downstreamExport, // Using Downstream_Export as unitValue
+                            flowDesc: downstreamExport > downstreamImport ? 'Export' : 'Import',
                         };
                     });
                     setHilirisasiData(dataList);
-                } catch (error) {
-                    console.error("Error fetching hilirisasi data:", error);
-                } finally {
-                    setLoading(false);
+                } else {
+                    setHilirisasiData([]);
                 }
-            };
+                setLoading(false);
+            }, (error) => {
+                console.error("Error fetching hilirisasi data from RTDB:", error);
+                setLoading(false);
+            });
 
-            fetchData();
+            return () => unsubscribe();
         }
     }, [user, activeDashTab]);
 
