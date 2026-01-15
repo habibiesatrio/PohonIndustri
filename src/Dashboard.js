@@ -59,7 +59,6 @@ import AnalitikPaten from './AnalitikPaten';
 const Dashboard = () => {
     const [user, setUser] = useState(null);
     const [activeDashTab, setActiveDashTab] = useState('hilirisasi');
-    const [isHilirisasiOpen, setHilirisasiOpen] = useState(true);
     const [hilirisasiData, setHilirisasiData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [flowFilter, setFlowFilter] = useState('All');
@@ -86,7 +85,9 @@ const Dashboard = () => {
                         return {
                             id: doc.id,
                             ...data,
-                            ...techData
+                            ...techData,
+                            trl: Number(techData.trl) || 0,
+                            unitValue: Number(data.unitValue) || 0,
                         };
                     });
                     setHilirisasiData(dataList);
@@ -112,6 +113,35 @@ const Dashboard = () => {
         }
         return hilirisasiData.filter(item => item.flowDesc === flowFilter);
     }, [hilirisasiData, flowFilter]);
+
+    const dashboardMetrics = useMemo(() => {
+        if (hilirisasiData.length === 0) {
+            return {
+                totalCommodities: 0,
+                averageMaturity: 'TRL 0.0',
+                aggregateAddedValue: '0x',
+                selfSufficiencyStatus: '0%'
+            };
+        }
+
+        const totalCommodities = hilirisasiData.length;
+
+        const totalTrl = hilirisasiData.reduce((acc, item) => acc + item.trl, 0);
+        const averageMaturity = (totalTrl / totalCommodities).toFixed(1);
+
+        const totalUnitValue = hilirisasiData.reduce((acc, item) => acc + item.unitValue, 0);
+        const aggregateAddedValue = (totalUnitValue / totalCommodities / 1000).toFixed(1); // As a simple proxy
+
+        const exportItems = hilirisasiData.filter(item => item.flowDesc === 'Export').length;
+        const selfSufficiencyStatus = Math.round((exportItems / totalCommodities) * 100);
+
+        return {
+            totalCommodities,
+            averageMaturity: `TRL ${averageMaturity}`,
+            aggregateAddedValue: `${aggregateAddedValue}x`,
+            selfSufficiencyStatus: `${selfSufficiencyStatus}%`
+        };
+    }, [hilirisasiData]);
 
     if (!user) {
         return <div className="min-h-screen flex items-center justify-center"><p>Loading user data...</p></div>;
@@ -164,10 +194,10 @@ const Dashboard = () => {
                 {activeDashTab === 'hilirisasi' && (
                     <div className="animate-in fade-in duration-500 space-y-8">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                            <MetricCard label="Total Komoditas Strategis" val="95" sub="Sesuai Roadmap 2045" icon={<Database className="text-sky-600" />} />
-                            <MetricCard label="Maturitas Rata-rata" val="TRL 7.2" sub="Trend Meningkat" icon={<Target className="text-indigo-600" />} />
-                            <MetricCard label="Nilai Tambah Agregat" val="35.4x" sub="Target: 50x" icon={<TrendingUp className="text-emerald-600" />} />
-                            <MetricCard label="Status Swasembada" val="64%" sub="Proyeksi 2026" icon={<Globe className="text-amber-600" />} />
+                            <MetricCard label="Total Komoditas Strategis" val={dashboardMetrics.totalCommodities} sub="Sesuai Roadmap 2045" icon={<Database className="text-sky-600" />} />
+                            <MetricCard label="Maturitas Rata-rata" val={dashboardMetrics.averageMaturity} sub="Trend Meningkat" icon={<Target className="text-indigo-600" />} />
+                            <MetricCard label="Nilai Tambah Agregat" val={dashboardMetrics.aggregateAddedValue} sub="Target: 50x" icon={<TrendingUp className="text-emerald-600" />} />
+                            <MetricCard label="Status Swasembada" val={dashboardMetrics.selfSufficiencyStatus} sub="Proyeksi 2026" icon={<Globe className="text-amber-600" />} />
                         </div>
                         <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
                             <div className="flex justify-between items-center mb-6">
