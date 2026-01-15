@@ -121,19 +121,40 @@ const PatentManagement = () => {
             setNotification({ message: 'No data to import.', type: 'warning' });
             return;
         }
-        console.log("Starting patent data import...");
+        console.log("Starting patent data import with validation...");
 
+        const invalidRows = [];
         const batch = writeBatch(db);
+
         previewData.forEach((row, index) => {
-            console.log(`Processing row ${index} for import:`, row);
+            const finalJenisProduk = jenisProduk || row.jenisProduk; // Prioritize dropdown
+            const finalNamaProduk = row.namaProduk;
+            const finalPublikasi = row.publikasi;
+
+            // Validation check
+            if (!finalJenisProduk || !finalNamaProduk || !finalPublikasi) {
+                console.warn(`Validation failed for row ${index + 1}:`, {finalJenisProduk, finalNamaProduk, finalPublikasi});
+                invalidRows.push({ index: index + 2, name: finalNamaProduk || 'Unknown' }); // +2 because of header and 0-based index
+                return; // Skip adding this row to the batch
+            }
+
             const docRef = doc(collection(db, "patents")); // Auto-generates ID
             batch.set(docRef, {
                 ...row,
-                jenisProduk: jenisProduk || row.jenisProduk || 'N/A',
-                jumlahPaten: jumlahPaten || row.jumlahPaten || 'N/A',
+                jenisProduk: finalJenisProduk,
+                namaProduk: finalNamaProduk,
+                publikasi: finalPublikasi,
+                jumlahPaten: jumlahPaten || row.jumlahPaten || 'Tidak Ditentukan',
                 createdAt: new Date()
             });
         });
+
+        if (invalidRows.length > 0) {
+            const errorMsg = `Import Aborted. ${invalidRows.length} rows are missing required data ('jenisProduk', 'namaProduk', or 'publikasi'). Please fix your file and try again. Problematic rows: ${invalidRows.map(r => r.name).join(', ')}`;
+            setNotification({ message: errorMsg, type: 'error' });
+            alert(errorMsg);
+            return;
+        }
 
         try {
             await batch.commit();

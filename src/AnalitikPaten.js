@@ -24,130 +24,132 @@ const initialEdges = [
 
 const COLORS = ["#0ea5e9", "#6366f1", "#10b981", "#f97316", "#ef4444", "#8b5cf6"];
 
-const PatentCard = ({ patent }) => (
-    <div className="bg-white border border-slate-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-all ease-in-out">
-        <p className="text-xs font-bold text-sky-600 uppercase mb-1">{patent.jenisProduk || 'N/A'}</p>
-        <h4 className="font-bold text-slate-800 mb-2">{patent.namaProduk || 'Nama Produk Tidak Tersedia'}</h4>
-        <p className="text-xs text-slate-500 mb-3">Publikasi: <span className="font-semibold">{patent.publikasi || 'N/A'}</span></p>
-        <p className="text-xs font-mono bg-slate-50 rounded p-1 text-center">Tahun: {patent.createdAt instanceof Date ? patent.createdAt.getFullYear() : 'N/A'}</p>
-    </div>
+const PatentCard = ({ patent }) => ( <
+    div className = "bg-white border border-slate-100 rounded-xl p-4 shadow-sm hover:shadow-md transition-all ease-in-out" >
+    <
+    p className = "text-xs font-bold text-sky-600 uppercase mb-1" > { patent.JenisProduk || 'N/A' } < /p> <
+    h4 className = "font-bold text-slate-800 mb-2" > { patent.namaProduk || 'Nama Produk Tidak Tersedia' } < /h4> <
+    p className = "text-xs text-slate-500 mb-3" > Publikasi: < span className = "font-semibold" > { patent.publikasi || 'N/A' } < /span></p >
+    <
+    p className = "text-xs font-mono bg-slate-50 rounded p-1 text-center" > Tahun: { patent.createdAt instanceof Date ? patent.createdAt.getFullYear() : 'N/A' } < /p> < /
+    div >
 );
 
 
 const AnalitikPaten = () => {
-    const [patentsData, setPatentsData] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [filter, setFilter] = useState('Semua');
-    const [drilldownFilter, setDrilldownFilter] = useState(null); // { key, value }
-    const [nodes, setNodes, onNodesChange] = useNodesState(initialNodesData);
-    const [edges] = useEdgesState(initialEdges);
+        const [patentsData, setPatentsData] = useState([]);
+        const [loading, setLoading] = useState(true);
+        const [filter, setFilter] = useState('Semua');
+        const [drilldownFilter, setDrilldownFilter] = useState(null); // { key, value }
+        const [nodes, setNodes, onNodesChange] = useNodesState(initialNodesData);
+        const [edges] = useEdgesState(initialEdges);
 
-    useEffect(() => {
-        const fetchPatents = async () => {
-            setLoading(true);
-            try {
-                const querySnapshot = await getDocs(collection(db, "patents"));
-                const dataList = querySnapshot.docs.map(doc => {
-                    const data = doc.data();
-                    if (data.createdAt && data.createdAt.toDate) {
-                        data.createdAt = data.createdAt.toDate();
-                    }
-                    return { id: doc.id, ...data };
-                });
-                setPatentsData(dataList);
-            } catch (error) {
-                console.error("Error fetching patents data:", error);
-            } finally {
-                setLoading(false);
+        useEffect(() => {
+            const fetchPatents = async() => {
+                setLoading(true);
+                try {
+                    const querySnapshot = await getDocs(collection(db, "patents"));
+                    const dataList = querySnapshot.docs.map(doc => {
+                        const data = doc.data();
+                        if (data.createdAt && data.createdAt.toDate) {
+                            data.createdAt = data.createdAt.toDate();
+                        }
+                        return { id: doc.id, ...data };
+                    });
+                    setPatentsData(dataList);
+                } catch (error) {
+                    console.error("Error fetching patents data:", error);
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchPatents();
+        }, []);
+
+        const handleChartClick = (data) => {
+            if (data && data.activePayload) {
+                const payload = data.activePayload[0].payload;
+                const year = payload.year;
+                const productType = data.activeLabel;
+                setDrilldownFilter({ year, JenisProduk: productType });
             }
         };
-        fetchPatents();
-    }, []);
 
-    const handleChartClick = (data) => {
-        if (data && data.activePayload) {
-            const payload = data.activePayload[0].payload;
-            const year = payload.year;
-            const productType = data.activeLabel;
-            setDrilldownFilter({ year, jenisProduk: productType });
-        }
-    };
-    
-    const onNodeClick = useCallback((event, node) => {
-        const productType = node.data.type;
-        if (productType && productType !== 'output') {
-             setDrilldownFilter({ jenisProduk: productType });
-        }
-    }, []);
-
-    const clearDrilldown = () => setDrilldownFilter(null);
-
-    const patentsForDisplay = useMemo(() => {
-        let data = (filter === 'Semua') ? patentsData : patentsData.filter(p => p.jenisProduk === filter);
-        if (drilldownFilter) {
-            data = data.filter(p => {
-                let matches = true;
-                if (drilldownFilter.year) {
-                    matches = matches && p.createdAt instanceof Date && p.createdAt.getFullYear() === drilldownFilter.year;
-                }
-                if (drilldownFilter.jenisProduk) {
-                    matches = matches && p.jenisProduk === drilldownFilter.jenisProduk;
-                }
-                return matches;
-            });
-        }
-        return data;
-    }, [patentsData, filter, drilldownFilter]);
-
-    const { chartData, productTypes } = useMemo(() => {
-        const dataToProcess = (filter === 'Semua') ? patentsData : patentsData.filter(p => p.jenisProduk === filter);
-        const patentsByYearAndType = dataToProcess.reduce((acc, patent) => {
-            if (patent.createdAt instanceof Date) {
-                const year = patent.createdAt.getFullYear();
-                const type = patent.jenisProduk || 'Lainnya';
-                if (!acc[year]) acc[year] = { year };
-                acc[year][type] = (acc[year][type] || 0) + 1;
+        const onNodeClick = useCallback((event, node) => {
+            const productType = node.data.type;
+            if (productType && productType !== 'output') {
+                setDrilldownFilter({ JenisProduk: productType });
             }
-            return acc;
-        }, {});
-        const allProductTypes = [...new Set(dataToProcess.map(p => p.jenisProduk || 'Lainnya'))];
-        const result = Object.values(patentsByYearAndType).sort((a, b) => a.year - b.year);
-        return { chartData: result, productTypes: allProductTypes };
-    }, [patentsData, filter]);
+        }, []);
 
-    useEffect(() => {
-        const counts = patentsData.reduce((acc, p) => {
-            const type = p.jenisProduk;
-            if (type) {
-                if (type.includes('Perguruan Tinggi')) acc.pt++;
-                else if (type.includes('BRIN')) acc.brin++;
-                else if (type.includes('Industri Dalam Negeri')) acc.idn++;
-                else if (type.includes('Industri Luar Negeri')) acc.iln++;
+        const clearDrilldown = () => setDrilldownFilter(null);
+
+        const patentsForDisplay = useMemo(() => {
+            let data = (filter === 'Semua') ? patentsData : patentsData.filter(p => p.JenisProduk === filter);
+            if (drilldownFilter) {
+                data = data.filter(p => {
+                    let matches = true;
+                    if (drilldownFilter.year) {
+                        matches = matches && p.createdAt instanceof Date && p.createdAt.getFullYear() === drilldownFilter.year;
+                    }
+                    if (drilldownFilter.JenisProduk) {
+                        matches = matches && p.JenisProduk === drilldownFilter.JenisProduk;
+                    }
+                    return matches;
+                });
             }
-            return acc;
-        }, { pt: 0, brin: 0, idn: 0, iln: 0 });
+            return data;
+        }, [patentsData, filter, drilldownFilter]);
 
-        setNodes(nds =>
-            nds.map(node => {
-                const newLabel = (label, count) => `${label} (${count} Paten)`;
-                if (node.id === '1') node.data = { ...node.data, label: newLabel('Perguruan Tinggi', counts.pt) };
-                if (node.id === '2') node.data = { ...node.data, label: newLabel('BRIN', counts.brin) };
-                if (node.id === '3') node.data = { ...node.data, label: newLabel('Industri DN', counts.idn) };
-                if (node.id === '5') node.data = { ...node.data, label: newLabel('Industri LN', counts.iln) };
-                return node;
-            })
-        );
-    }, [patentsData, setNodes]);
+        const { chartData, productTypes } = useMemo(() => {
+            const dataToProcess = (filter === 'Semua') ? patentsData : patentsData.filter(p => p.JenisProduk === filter);
+            const patentsByYearAndType = dataToProcess.reduce((acc, patent) => {
+                if (patent.createdAt instanceof Date) {
+                    const year = patent.createdAt.getFullYear();
+                    const type = patent.JenisProduk || 'Lainnya';
+                    if (!acc[year]) acc[year] = { year };
+                    acc[year][type] = (acc[year][type] || 0) + 1;
+                }
+                return acc;
+            }, {});
+            const allProductTypes = [...new Set(dataToProcess.map(p => p.JenisProduk || 'Lainnya'))];
+            const result = Object.values(patentsByYearAndType).sort((a, b) => a.year - b.year);
+            return { chartData: result, productTypes: allProductTypes };
+        }, [patentsData, filter]);
+
+        useEffect(() => {
+            const counts = patentsData.reduce((acc, p) => {
+                const type = p.JenisProduk;
+                if (type) {
+                    if (type.includes('Perguruan Tinggi')) acc.pt++;
+                    else if (type.includes('BRIN')) acc.brin++;
+                    else if (type.includes('Industri Dalam Negeri')) acc.idn++;
+                    else if (type.includes('Industri Luar Negeri')) acc.iln++;
+                }
+                return acc;
+            }, { pt: 0, brin: 0, idn: 0, iln: 0 });
+
+            setNodes(nds =>
+                nds.map(node => {
+                    const newLabel = (label, count) => `${label} (${count} Paten)`;
+                    if (node.id === '1') node.data = {...node.data, label: newLabel('Perguruan Tinggi', counts.pt) };
+                    if (node.id === '2') node.data = {...node.data, label: newLabel('BRIN', counts.brin) };
+                    if (node.id === '3') node.data = {...node.data, label: newLabel('Industri DN', counts.idn) };
+                    if (node.id === '5') node.data = {...node.data, label: newLabel('Industri LN', counts.iln) };
+                    return node;
+                })
+            );
+        }, [patentsData, setNodes]);
 
 
-    const renderExplanation = () => {
-        const totalPatents = patentsForDisplay.length;
-        let explanation = `Menampilkan ${totalPatents} paten. `;
+        const renderExplanation = () => {
+                const totalPatents = patentsForDisplay.length;
+                let explanation = `Menampilkan ${totalPatents} paten. `;
 
-        if(drilldownFilter) {
-            const year = drilldownFilter.year;
-            const type = drilldownFilter.jenisProduk;
-            explanation = `Drilldown aktif: ${totalPatents} paten ditemukan untuk ${type ? `tipe "${type}"` : ''} ${year ? `di tahun ${year}`: ''}. Klik tombol 'Clear' untuk kembali.`
+                if (drilldownFilter) {
+                    const year = drilldownFilter.year;
+                    const type = drilldownFilter.JenisProduk;
+                    explanation = `Drilldown aktif: ${totalPatents} paten ditemukan untuk ${type ? `tipe "${type}"` : ''} ${year ? `di tahun ${year}`: ''}. Klik tombol 'Clear' untuk kembali.`
         } else if (filter !== 'Semua') {
             explanation += `Data difilter berdasarkan jenis produk: "${filter}".`
         } else {
