@@ -107,7 +107,8 @@ const PatentManagement = () => {
   
       const batch = writeBatch(db);
       previewData.forEach((row) => {
-          const docRef = doc(collection(db, "patents"));
+          const docId = row.NO ? String(row.NO) : doc(collection(db, "patents")).id;
+          const docRef = doc(db, "patents", docId);
           batch.set(docRef, row);
       });
   

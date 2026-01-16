@@ -107,7 +107,8 @@ const PublicationManagement = () => {
   
       const batch = writeBatch(db);
       previewData.forEach((row) => {
-          const docRef = doc(collection(db, "publications"));
+          const docId = row.NO ? String(row.NO) : doc(collection(db, "publications")).id;
+          const docRef = doc(db, "publications", docId);
           batch.set(docRef, row);
       });
   
