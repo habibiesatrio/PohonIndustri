@@ -74,6 +74,8 @@ const PublicationManagement = () => {
                     return;
                 }
                 
+                console.log('Parsed data:', parsedData);
+
                 if (Array.isArray(parsedData)) {
                     setPreviewData(parsedData);
                     setNotification({ message: 'Preview ready. Please confirm to import.', type: 'info' });
