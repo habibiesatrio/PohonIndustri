@@ -3,7 +3,8 @@ import { db } from './firebase';
 import { collection, getDocs, doc, writeBatch } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import PatentManagement from './PatentManagement'; // Import the new component
+import PatentManagement from './PatentManagement';
+import PublicationManagement from './PublicationManagement';
 
 const DataManagement = () => {
   const [data, setData] = useState([]);
@@ -11,7 +12,7 @@ const DataManagement = () => {
   const [file, setFile] = useState(null);
   const [notification, setNotification] = useState({ message: '', type: '' });
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('pohonIndustri'); // 'pohonIndustri' or 'paten'
+  const [activeTab, setActiveTab] = useState('pohonIndustri'); // 'pohonIndustri', 'paten', or 'publication'
 
   useEffect(() => {
     const loadData = async () => {
@@ -230,6 +231,16 @@ const DataManagement = () => {
               >
                   Manajemen Paten
               </button>
+              <button
+                  onClick={() => setActiveTab('publication')}
+                  className={`${
+                      activeTab === 'publication'
+                          ? 'border-sky-500 text-sky-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+              >
+                  Manajemen Publikasi
+              </button>
           </nav>
       </div>
 
@@ -283,6 +294,7 @@ const DataManagement = () => {
       )}
 
       {activeTab === 'paten' && <PatentManagement />}
+      {activeTab === 'publication' && <PublicationManagement />}
 
     </div>
   );
