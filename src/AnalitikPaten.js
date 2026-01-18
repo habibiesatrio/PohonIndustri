@@ -97,6 +97,8 @@ const AnalitikPaten = () => {
     const [selectedHolder, setSelectedHolder] = useState('');
     const [selectedTechnology, setSelectedTechnology] = useState('');
     const [filteredPublications, setFilteredPublications] = useState([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(20);
     const [loading, setLoading] = useState(true);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodesData);
@@ -260,7 +262,7 @@ const AnalitikPaten = () => {
                 )}
             </div>
 
-            {(selectedHolder || selectedTechnology) && (
+            {filteredPublications.length > 0 && (
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
                     <h3 className="text-xl font-bold text-slate-800 mb-6">Publikasi yang Difilter</h3>
                     <div className="overflow-x-auto">
@@ -275,7 +277,9 @@ const AnalitikPaten = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredPublications.map((row, index) => (
+                                {filteredPublications
+                                    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                                    .map((row, index) => (
                                     <tr key={index}>
                                         {COLUMN_ORDER.map(key => (
                                             <td key={key} className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
@@ -286,6 +290,23 @@ const AnalitikPaten = () => {
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                    <div className="flex justify-between items-center mt-4">
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={currentPage === 1}
+                            className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
+                        >
+                            Previous
+                        </button>
+                        <span>Page {currentPage} of {Math.ceil(filteredPublications.length / itemsPerPage)}</span>
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(filteredPublications.length / itemsPerPage)))}
+                            disabled={currentPage === Math.ceil(filteredPublications.length / itemsPerPage)}
+                            className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50"
+                        >
+                            Next
+                        </button>
                     </div>
                 </div>
             )}
