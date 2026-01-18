@@ -76,6 +76,7 @@ const DetailModal = ({ product, onClose }) => {
 
 const AnalitikPaten = () => {
     const [patentsData, setPatentsData] = useState([]);
+    const [publicationHolders, setPublicationHolders] = useState({});
     const [loading, setLoading] = useState(true);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodesData);
@@ -91,11 +92,12 @@ const AnalitikPaten = () => {
     const totalPatents = useMemo(() => chartData.reduce((acc, p) => acc + p.total, 0), [chartData]);
     
     useEffect(() => {
-        const fetchPatents = async () => {
+        const fetchData = async () => {
             setLoading(true);
             try {
-                const querySnapshot = await getDocs(collection(db, "patents"));
-                const dataList = querySnapshot.docs.map(doc => {
+                // Fetch patents
+                const patentsSnapshot = await getDocs(collection(db, "patents"));
+                const patentsList = patentsSnapshot.docs.map(doc => {
                     const rawData = doc.data();
                     const sanitizedData = { id: doc.id };
                     
@@ -111,18 +113,30 @@ const AnalitikPaten = () => {
                     }
                     return sanitizedData;
                 });
-                setPatentsData(dataList);
+                setPatentsData(patentsList);
+
+                // Fetch publications
+                const publicationsSnapshot = await getDocs(collection(db, "publications"));
+                const holders = {};
+                publicationsSnapshot.docs.forEach(doc => {
+                    const holder = doc.data().PEMEGANG;
+                    if (holder) {
+                        holders[holder] = (holders[holder] || 0) + 1;
+                    }
+                });
+                setPublicationHolders(holders);
+
             } catch (error) {
-                console.error("Error fetching patents data:", error);
+                console.error("Error fetching data:", error);
             } finally {
                 setLoading(false);
             }
         };
-        fetchPatents();
+        fetchData();
     }, []);
 
     useEffect(() => {
-        if (patentsData.length > 0) {
+        if (patentsData.length > 0 || Object.keys(publicationHolders).length > 0) {
             const categoryTotals = patentsData.reduce((acc, p) => {
                 acc.pt += p.pt || 0;
                 acc.brin += p.brin || 0;
@@ -133,16 +147,31 @@ const AnalitikPaten = () => {
 
             setNodes(nds =>
                 nds.map(node => {
-                    const newLabel = (label, count) => `${label} (${count} Paten)`;
-                    if (node.id === '1') node.data = { ...node.data, label: newLabel('Perguruan Tinggi', categoryTotals.pt) };
-                    if (node.id === '2') node.data = { ...node.data, label: newLabel('BRIN', categoryTotals.brin) };
-                    if (node.id === '3') node.data = { ...node.data, label: newLabel('Industri DN', categoryTotals.idn) };
-                    if (node.id === '5') node.data = { ...node.data, label: newLabel('Industri LN', categoryTotals.iln) };
+                    const newLabel = (label, patentCount, holderCount) => {
+                        return `${label} (${patentCount} Paten, ${holderCount} Publikasi)`;
+                    };
+                    
+                    if (node.id === '1') {
+                        const holderCount = publicationHolders['Perguruan Tinggi'] || 0;
+                        node.data = { ...node.data, label: newLabel('Perguruan Tinggi', categoryTotals.pt, holderCount) };
+                    }
+                    if (node.id === '2') {
+                        const holderCount = publicationHolders['BRIN'] || 0;
+                        node.data = { ...node.data, label: newLabel('BRIN', categoryTotals.brin, holderCount) };
+                    }
+                    if (node.id === '3') {
+                        const holderCount = publicationHolders['Industri Dalam Negeri'] || 0;
+                        node.data = { ...node.data, label: newLabel('Industri DN', categoryTotals.idn, holderCount) };
+                    }
+                    if (node.id === '5') {
+                        const holderCount = publicationHolders['Industri Luar Negeri'] || 0;
+                        node.data = { ...node.data, label: newLabel('Industri LN', categoryTotals.iln, holderCount) };
+                    }
                     return node;
                 })
             );
         }
-    }, [patentsData, setNodes]);
+    }, [patentsData, publicationHolders, setNodes]);
 
     const handleChartClick = (data) => {
         if (data && data.activePayload) {
