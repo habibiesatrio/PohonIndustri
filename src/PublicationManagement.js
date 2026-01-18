@@ -39,6 +39,7 @@ const PublicationManagement = () => {
         id: doc.id,
         ...doc.data()
       }));
+      console.log('Fetched data:', dataList);
       setData(dataList);
     } catch (error) {
       console.error("Error fetching data:", error.message);
