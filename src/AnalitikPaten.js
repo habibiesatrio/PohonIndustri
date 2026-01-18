@@ -77,6 +77,7 @@ const DetailModal = ({ product, onClose }) => {
 const AnalitikPaten = () => {
     const [patentsData, setPatentsData] = useState([]);
     const [publicationHolders, setPublicationHolders] = useState({});
+    const [publicationChartData, setPublicationChartData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodesData);
@@ -125,6 +126,12 @@ const AnalitikPaten = () => {
                     }
                 });
                 setPublicationHolders(holders);
+
+                const chartData = Object.keys(holders).map(key => ({
+                    name: key,
+                    value: holders[key]
+                }));
+                setPublicationChartData(chartData);
 
             } catch (error) {
                 console.error("Error fetching data:", error);
@@ -208,6 +215,22 @@ const AnalitikPaten = () => {
                             {SAFE_KEYS.map((key) => (
                                 <Bar key={key} dataKey={key} stackId="a" fill={COLORS[key]} name={DISPLAY_NAMES[key]} />
                             ))}
+                        </BarChart>
+                    </ResponsiveContainer>
+                )}
+            </div>
+            
+            <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                <h3 className="text-xl font-bold text-slate-800 mb-6">Perkembangan Publikasi berdasarkan Pemegang</h3>
+                {loading ? <p>Memuat chart...</p> : (
+                    <ResponsiveContainer width="100%" height={400}>
+                        <BarChart data={publicationChartData} layout="vertical" margin={{ top: 20, right: 30, left: 100, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis type="number" />
+                            <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 12 }} />
+                            <Tooltip />
+                            <Legend />
+                            <Bar dataKey="value" fill="#8884d8" name="Jumlah Publikasi" />
                         </BarChart>
                     </ResponsiveContainer>
                 )}
