@@ -76,8 +76,10 @@ const DetailModal = ({ product, onClose }) => {
 
 const AnalitikPaten = () => {
     const [patentsData, setPatentsData] = useState([]);
-    const [publicationHolders, setPublicationHolders] = useState({});
-    const [publicationChartData, setPublicationChartData] = useState([]);
+    const [publications, setPublications] = useState([]);
+    const [publicationHolders, setPublicationHolders] = useState([]);
+    const [selectedHolder, setSelectedHolder] = useState('');
+    const [filteredPublications, setFilteredPublications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodesData);
@@ -118,20 +120,11 @@ const AnalitikPaten = () => {
 
                 // Fetch publications
                 const publicationsSnapshot = await getDocs(collection(db, "publications"));
-                const holders = {};
-                publicationsSnapshot.docs.forEach(doc => {
-                    const holder = doc.data().PEMEGANG;
-                    if (holder) {
-                        holders[holder] = (holders[holder] || 0) + 1;
-                    }
-                });
-                setPublicationHolders(holders);
+                const publicationsList = publicationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setPublications(publicationsList);
 
-                const chartData = Object.keys(holders).map(key => ({
-                    name: key,
-                    value: holders[key]
-                }));
-                setPublicationChartData(chartData);
+                const holders = [...new Set(publicationsList.map(p => p.PEMEGANG).filter(Boolean))];
+                setPublicationHolders(holders);
 
             } catch (error) {
                 console.error("Error fetching data:", error);
@@ -143,42 +136,40 @@ const AnalitikPaten = () => {
     }, []);
 
     useEffect(() => {
-        if (patentsData.length > 0 || Object.keys(publicationHolders).length > 0) {
-            const categoryTotals = patentsData.reduce((acc, p) => {
-                acc.pt += p.pt || 0;
-                acc.brin += p.brin || 0;
-                acc.idn += p.idn || 0;
-                acc.iln += p.iln || 0;
-                return acc;
-            }, { pt: 0, brin: 0, idn: 0, iln: 0 });
+        if (selectedHolder) {
+            setFilteredPublications(publications.filter(p => p.PEMEGANG === selectedHolder));
+        } else {
+            setFilteredPublications([]);
+        }
+    }, [selectedHolder, publications]);
 
+    useEffect(() => {
+        if (selectedHolder) {
+            const holderCount = filteredPublications.length;
             setNodes(nds =>
                 nds.map(node => {
-                    const newLabel = (label, patentCount, holderCount) => {
-                        return `${label} (${patentCount} Paten, ${holderCount} Publikasi)`;
-                    };
-                    
-                    if (node.id === '1') {
-                        const holderCount = publicationHolders['Perguruan Tinggi'] || 0;
-                        node.data = { ...node.data, label: newLabel('Perguruan Tinggi', categoryTotals.pt, holderCount) };
-                    }
-                    if (node.id === '2') {
-                        const holderCount = publicationHolders['BRIN'] || 0;
-                        node.data = { ...node.data, label: newLabel('BRIN', categoryTotals.brin, holderCount) };
-                    }
-                    if (node.id === '3') {
-                        const holderCount = publicationHolders['Industri Dalam Negeri'] || 0;
-                        node.data = { ...node.data, label: newLabel('Industri DN', categoryTotals.idn, holderCount) };
-                    }
-                    if (node.id === '5') {
-                        const holderCount = publicationHolders['Industri Luar Negeri'] || 0;
-                        node.data = { ...node.data, label: newLabel('Industri LN', categoryTotals.iln, holderCount) };
+                    const newLabel = (label, count) => `${label} (${count} Publikasi)`;
+                    if (node.data.label.includes('Perguruan Tinggi') && selectedHolder === 'Perguruan Tinggi') {
+                        node.data = { ...node.data, label: newLabel('Perguruan Tinggi', holderCount) };
+                    } else if (node.data.label.includes('BRIN') && selectedHolder === 'BRIN') {
+                        node.data = { ...node.data, label: newLabel('BRIN', holderCount) };
+                    } else if (node.data.label.includes('Industri DN') && selectedHolder === 'Industri Dalam Negeri') {
+                        node.data = { ...node.data, label: newLabel('Industri DN', holderCount) };
+                    } else if (node.data.label.includes('Industri LN') && selectedHolder === 'Industri Luar Negeri') {
+                        node.data = { ...node.data, label: newLabel('Industri LN', holderCount) };
+                    } else {
+                        // Reset other nodes
+                        const originalLabel = initialNodesData.find(n => n.id === node.id).data.label;
+                        node.data = { ...node.data, label: originalLabel };
                     }
                     return node;
                 })
             );
+        } else {
+            // Reset all nodes if no holder is selected
+            setNodes(initialNodesData);
         }
-    }, [patentsData, publicationHolders, setNodes]);
+    }, [filteredPublications, selectedHolder, setNodes]);
 
     const handleChartClick = (data) => {
         if (data && data.activePayload) {
@@ -203,6 +194,20 @@ const AnalitikPaten = () => {
             </div>
 
             <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                <h3 className="text-xl font-bold text-slate-800 mb-6">Filter Publikasi berdasarkan Pemegang</h3>
+                <select
+                    value={selectedHolder}
+                    onChange={(e) => setSelectedHolder(e.target.value)}
+                    className="w-full p-2 border rounded"
+                >
+                    <option value="">Pilih Pemegang</option>
+                    {publicationHolders.map(holder => (
+                        <option key={holder} value={holder}>{holder}</option>
+                    ))}
+                </select>
+            </div>
+
+            <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
                 <h3 className="text-xl font-bold text-slate-800 mb-6">Perkembangan Paten berdasarkan Jenis Produk</h3>
                 {loading ? <p>Memuat chart...</p> : (
                     <ResponsiveContainer width="100%" height={400}>
@@ -219,22 +224,36 @@ const AnalitikPaten = () => {
                     </ResponsiveContainer>
                 )}
             </div>
-            
-            <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
-                <h3 className="text-xl font-bold text-slate-800 mb-6">Perkembangan Publikasi berdasarkan Pemegang</h3>
-                {loading ? <p>Memuat chart...</p> : (
-                    <ResponsiveContainer width="100%" height={400}>
-                        <BarChart data={publicationChartData} layout="vertical" margin={{ top: 20, right: 30, left: 100, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis type="number" />
-                            <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 12 }} />
-                            <Tooltip />
-                            <Legend />
-                            <Bar dataKey="value" fill="#8884d8" name="Jumlah Publikasi" />
-                        </BarChart>
-                    </ResponsiveContainer>
-                )}
-            </div>
+
+            {selectedHolder && (
+                <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                    <h3 className="text-xl font-bold text-slate-800 mb-6">Publikasi oleh {selectedHolder}</h3>
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full leading-normal">
+                            <thead>
+                                <tr>
+                                    {filteredPublications.length > 0 && Object.keys(filteredPublications[0]).map(key => (
+                                        <th key={key} className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                            {key}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredPublications.map((row, index) => (
+                                    <tr key={index}>
+                                        {Object.values(row).map((value, i) => (
+                                            <td key={i} className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                                                <p className="text-gray-900 whitespace-no-wrap">{String(value)}</p>
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
             
             <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100" style={{ height: 600 }}>
                 <h3 className="text-xl font-bold text-slate-800 mb-6">Peta Jalan Paten (Total Paten: {totalPatents})</h3>
