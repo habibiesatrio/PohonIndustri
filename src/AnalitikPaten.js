@@ -74,11 +74,28 @@ const DetailModal = ({ product, onClose }) => {
     );
 };
 
+const COLUMN_ORDER = [
+    'NO',
+    'PEMEGANG',
+    'JUDUL PATEN',
+    'INVENTOR',
+    'SATUAN KERJA',
+    'STATUS',
+    'TANGGAL PENDAFTARAN',
+    'NOMOR PENDAFTARAN',
+    'TANGGAL GRANTED',
+    'NOMOR PATEN',
+    'Bidang Teknologi',
+    'Kategori'
+];
+
 const AnalitikPaten = () => {
     const [patentsData, setPatentsData] = useState([]);
     const [publications, setPublications] = useState([]);
     const [publicationHolders, setPublicationHolders] = useState([]);
+    const [technologyFields, setTechnologyFields] = useState([]);
     const [selectedHolder, setSelectedHolder] = useState('');
+    const [selectedTechnology, setSelectedTechnology] = useState('');
     const [filteredPublications, setFilteredPublications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedProduct, setSelectedProduct] = useState(null);
@@ -126,6 +143,9 @@ const AnalitikPaten = () => {
                 const holders = [...new Set(publicationsList.map(p => p.PEMEGANG).filter(Boolean))];
                 setPublicationHolders(holders);
 
+                const technologies = [...new Set(publicationsList.map(p => p['Bidang Teknologi']).filter(Boolean))];
+                setTechnologyFields(technologies);
+
             } catch (error) {
                 console.error("Error fetching data:", error);
             } finally {
@@ -136,12 +156,15 @@ const AnalitikPaten = () => {
     }, []);
 
     useEffect(() => {
+        let filtered = publications;
         if (selectedHolder) {
-            setFilteredPublications(publications.filter(p => p.PEMEGANG === selectedHolder));
-        } else {
-            setFilteredPublications([]);
+            filtered = filtered.filter(p => p.PEMEGANG === selectedHolder);
         }
-    }, [selectedHolder, publications]);
+        if (selectedTechnology) {
+            filtered = filtered.filter(p => p['Bidang Teknologi'] === selectedTechnology);
+        }
+        setFilteredPublications(filtered);
+    }, [selectedHolder, selectedTechnology, publications]);
 
     useEffect(() => {
         if (selectedHolder) {
@@ -194,17 +217,29 @@ const AnalitikPaten = () => {
             </div>
 
             <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
-                <h3 className="text-xl font-bold text-slate-800 mb-6">Filter Publikasi berdasarkan Pemegang</h3>
-                <select
-                    value={selectedHolder}
-                    onChange={(e) => setSelectedHolder(e.target.value)}
-                    className="w-full p-2 border rounded"
-                >
-                    <option value="">Pilih Pemegang</option>
-                    {publicationHolders.map(holder => (
-                        <option key={holder} value={holder}>{holder}</option>
-                    ))}
-                </select>
+                <h3 className="text-xl font-bold text-slate-800 mb-6">Filter Publikasi</h3>
+                <div className="grid grid-cols-2 gap-4">
+                    <select
+                        value={selectedHolder}
+                        onChange={(e) => setSelectedHolder(e.target.value)}
+                        className="w-full p-2 border rounded"
+                    >
+                        <option value="">Pilih Pemegang</option>
+                        {publicationHolders.map(holder => (
+                            <option key={holder} value={holder}>{holder}</option>
+                        ))}
+                    </select>
+                    <select
+                        value={selectedTechnology}
+                        onChange={(e) => setSelectedTechnology(e.target.value)}
+                        className="w-full p-2 border rounded"
+                    >
+                        <option value="">Pilih Bidang Teknologi</option>
+                        {technologyFields.map(field => (
+                            <option key={field} value={field}>{field}</option>
+                        ))}
+                    </select>
+                </div>
             </div>
 
             <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
@@ -225,14 +260,14 @@ const AnalitikPaten = () => {
                 )}
             </div>
 
-            {selectedHolder && (
+            {(selectedHolder || selectedTechnology) && (
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
-                    <h3 className="text-xl font-bold text-slate-800 mb-6">Publikasi oleh {selectedHolder}</h3>
+                    <h3 className="text-xl font-bold text-slate-800 mb-6">Publikasi yang Difilter</h3>
                     <div className="overflow-x-auto">
                         <table className="min-w-full leading-normal">
                             <thead>
                                 <tr>
-                                    {filteredPublications.length > 0 && Object.keys(filteredPublications[0]).map(key => (
+                                    {COLUMN_ORDER.map(key => (
                                         <th key={key} className="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                             {key}
                                         </th>
@@ -242,9 +277,9 @@ const AnalitikPaten = () => {
                             <tbody>
                                 {filteredPublications.map((row, index) => (
                                     <tr key={index}>
-                                        {Object.values(row).map((value, i) => (
-                                            <td key={i} className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                                                <p className="text-gray-900 whitespace-no-wrap">{String(value)}</p>
+                                        {COLUMN_ORDER.map(key => (
+                                            <td key={key} className="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                                                <p className="text-gray-900 whitespace-no-wrap">{String(row[key] || '')}</p>
                                             </td>
                                         ))}
                                     </tr>
@@ -256,7 +291,7 @@ const AnalitikPaten = () => {
             )}
             
             <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100" style={{ height: 600 }}>
-                <h3 className="text-xl font-bold text-slate-800 mb-6">Peta Jalan Paten (Total Paten: {totalPatents})</h3>
+                <h3 className="text-xl font-bold text-slate-800 mb-6">Peta Jalan Paten</h3>
                 <ReactFlow
                     nodes={nodes}
                     edges={edges}
